@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="rapid::internal::String">
+    <DisplayString>{{{m_data, s}}}</DisplayString>
+    <!--<StringView>data, na</StringView>-->
+  </Type>
+
+  <Type Name="rapid::internal::FixedArray">
+    <DisplayString>{{length = {m_length}}}</DisplayString>
+    <Expand>
+      <Item Name="[length]">m_length</Item>
+      <ArrayItems>
+        <Size>m_length</Size>
+        <ValuePointer>m_data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="rapid::internal::Array">
+    <DisplayString>{{length = {m_length}}}</DisplayString>
+    <Expand>
+      <Item Name="[length]">m_length</Item>
+      <Item Name="[capacity]">m_array->m_length</Item>
+      <ArrayItems>
+        <Size>m_length</Size>
+        <ValuePointer>m_array->m_data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="rapid::internal::Handle&lt;*&gt;">
+    <DisplayString>{{{m_p,na}}}</DisplayString>
+  </Type>
+</AutoVisualizer>

@@ -1,0 +1,109 @@
+fuction '#global'@0000024B12BFBFD0:
+  instructions:
+    000: CLOSURE 1
+    003: CALL 0
+    006: STOREL 0
+    009: CLOSURE 0
+    012: CLOSURE 2
+    015: LOADL 0
+    018: CALL 1
+    021: CALL 1
+    024: POP
+    025: CLOSURE 0
+    028: CLOSURE 3
+    031: LOADL 0
+    034: CALL 1
+    037: CALL 1
+    040: POP
+    041: RETNULL
+  locals(1):
+    0 n
+  consts(0):
+  inner func(4):
+    0 'print'@0000024B12BFC170
+    1 'input'@0000024B12BFC200
+    2 'fib1'@0000024B12BFC290
+    3 'fib2'@0000024B12BFC3B0
+
+fuction 'print'@0000024B12BFC170:
+  instructions:
+    000: RETNULL
+  locals(1):
+    0 x
+  consts(0):
+  inner func(0):
+
+fuction 'input'@0000024B12BFC200:
+  instructions:
+    000: RETNULL
+  locals(0):
+  consts(0):
+  inner func(0):
+
+fuction 'fib1'@0000024B12BFC290:
+  instructions:
+    000: LOADL 0
+    003: LOADK 0
+    006: LE
+    007: JMP_F 7
+    010: LOADK 1
+    013: RET
+    014: CLOSURE_SELF
+    015: LOADL 0
+    018: LOADK 0
+    021: SUB
+    022: CALL 1
+    025: CLOSURE_SELF
+    026: LOADL 0
+    029: LOADK 1
+    032: SUB
+    033: CALL 1
+    036: ADD
+    037: RET
+  locals(1):
+    0 n
+  consts(2):
+    0 2
+    1 1
+  inner func(0):
+
+fuction 'fib2'@0000024B12BFC3B0:
+  instructions:
+    000: LOADK 0
+    003: STOREL 1
+    006: LOADK 0
+    009: STOREL 2
+    012: LOADK 1
+    015: STOREL 3
+    018: LOADL 3
+    021: LOADL 0
+    024: LE
+    025: JMP_F 37
+    028: LOADL 1
+    031: STOREL 4
+    034: LOADL 1
+    037: LOADL 2
+    040: ADD
+    041: STOREL 1
+    044: POP
+    045: LOADL 1
+    048: STOREL 2
+    051: POP
+    052: LOADK 0
+    055: STOREL 3
+    058: POP
+    059: JMP -41
+    062: LOADL 1
+    065: RET
+  locals(5):
+    0 n
+    1 a
+    2 b
+    3 i
+    4 c
+  consts(2):
+    0 1
+    1 3
+  inner func(0):
+
+
