@@ -598,7 +598,7 @@ struct LoopCtx {
 };
 inline FunctionCtx* AllocFunctionCtx() {
   FunctionCtx* p =
-      (FunctionCtx*)CompilingMemoryZone::Alloc(sizeof(FunctionCtx));
+      (FunctionCtx*)CompilingMemoryZone::Alloc(sizeof(FunctionCtx)); 
   new (p) FunctionCtx();
   return p;
 }
