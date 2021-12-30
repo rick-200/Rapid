@@ -20,3 +20,5 @@ func fib2(n){
 var n=input();
 print(fib1(n));
 print(fib2(n));
+var console;
+console.print(123);

@@ -11,42 +11,42 @@ struct ZonePage;
 注意FreeAll时不会调用对象的析构函数
 */
 class CompilingMemoryZone {
- public:
-  static CompilingMemoryZone* Create();
+public:
+  static CompilingMemoryZone *Create();
   static void PrepareAlloc();
   static void FreeAll();
   static size_t GetUsage();
 
-  static void* Alloc(size_t size);
+  static void *Alloc(size_t size);
 };
-template <class T>
-class ZoneList {
+template <class T> class ZoneList {
   static_assert(std::is_trivially_destructible_v<T>, "<T> 必须可平凡析构");
 
- private:
-  T* m_p;
+private:
+  T *m_p;
   size_t m_siz, m_cap;
 
- private:
+private:
   void change_capacity(size_t new_cap) {
-    T* oldp = m_p;
-    m_p = (T*)CompilingMemoryZone::Alloc(sizeof(T) * new_cap);
+    T *oldp = m_p;
+    m_p = (T *)CompilingMemoryZone::Alloc(sizeof(T) * new_cap);
     VERIFY(m_p != nullptr);
-    for (size_t i = 0; i < m_siz; i++) new (m_p + i) T(std::move(oldp[i]));
+    for (size_t i = 0; i < m_siz; i++)
+      new (m_p + i) T(std::move(oldp[i]));
     // Free oldp
     m_cap = new_cap;
   }
 
- public:
+public:
   ZoneList() : m_p(nullptr), m_siz(0), m_cap(0) {}
   ~ZoneList() = default;
-  T* begin() const { return m_p; }
-  T* end() const { return m_p + m_siz; }
+  T *begin() const { return m_p; }
+  T *end() const { return m_p + m_siz; }
   size_t size() const { return m_siz; }
   size_t capacity() const { return m_cap; }
-  T& operator[](size_t pos) { return m_p[pos]; }
-  const T& operator[](size_t pos) const { return m_p[pos]; }
-  void push(const T& v) {
+  T &operator[](size_t pos) { return m_p[pos]; }
+  const T &operator[](size_t pos) const { return m_p[pos]; }
+  void push(const T &v) {
     reserve(m_siz + 1);
     new (m_p + m_siz) T(v);
     ++m_siz;
@@ -67,30 +67,31 @@ class ZoneList {
     m_siz = new_size;
   }
   void reserve(size_t size) {
-    if (size <= m_cap) return;
+    if (size <= m_cap)
+      return;
     change_capacity(std::max(size, m_cap << 1));
   }
   void shrink_to_fit() { change_capacity(m_siz); }
   void clear() { m_siz = 0; }
-  const T& front() { return *m_p; }
-  const T& back() { return m_p[m_siz - 1]; }
+  const T &front() { return *m_p; }
+  const T &back() { return m_p[m_siz - 1]; }
 };
-#define ITER_ASTNODE(V) \
-  V(ExpressionStat)     \
-  V(Literal)            \
-  V(BlockStat)          \
-  V(IfStat)             \
-  V(LoopStat)           \
-  V(VarDecl)            \
-  V(FuncDecl)           \
-  V(ReturnStat)         \
-  V(BreakStat)          \
-  V(ContinueStat)       \
-  V(VarExpr)            \
-  V(MemberExpr)         \
-  V(IndexExpr)          \
-  V(UnaryExpr)          \
-  V(BinaryExpr)         \
+#define ITER_ASTNODE(V)                                                        \
+  V(ExpressionStat)                                                            \
+  V(Literal)                                                                   \
+  V(BlockStat)                                                                 \
+  V(IfStat)                                                                    \
+  V(LoopStat)                                                                  \
+  V(VarDecl)                                                                   \
+  V(FuncDecl)                                                                  \
+  V(ReturnStat)                                                                \
+  V(BreakStat)                                                                 \
+  V(ContinueStat)                                                              \
+  V(VarExpr)                                                                   \
+  V(MemberExpr)                                                                \
+  V(IndexExpr)                                                                 \
+  V(UnaryExpr)                                                                 \
+  V(BinaryExpr)                                                                \
   V(AssignExpr) V(CallExpr)
 
 enum class AstNodeType {
@@ -105,28 +106,29 @@ struct Expression : public AstNode {};
 struct AssignableExpr : public Expression {};
 
 struct ExpressionStat : public Statement {
-  Expression* expr;
+  Expression *expr;
 };
 struct BlockStat : public Statement {
-  ZoneList<Statement*> stat;
+  ZoneList<Statement *> stat;
 };
 struct Literal : public Expression {
   Handle<Object> value;
 };
 struct IfStat : public Statement {
-  Expression* cond;
+  Expression *cond;
   Statement *then_stat, *else_stat;
 };
 struct LoopStat : public Statement {
   enum class Type { FOR, WHILE, DO };
   Type loop_type;
-  Statement *init, *after;
-  Expression* cond;
-  Statement* body;
+  Statement *init;
+  ExpressionStat *after;
+  Expression *cond;
+  Statement *body;
 };
 struct SingleVarDecl {
   Handle<String> name;
-  Expression* init;
+  Expression *init;
 };
 struct VarDecl : public Statement {
   ZoneList<SingleVarDecl> decl;
@@ -134,14 +136,14 @@ struct VarDecl : public Statement {
 struct FuncDecl : public Statement {
   Handle<String> name;
   ZoneList<Handle<String>> param;
-  BlockStat* body;
+  BlockStat *body;
 };
 // struct TryCatchStat : public Statement {
 //  BlockStat* try_body;
 //  BlockStat* catch_body;
 //};
 struct ReturnStat : public Statement {
-  Expression* expr;
+  Expression *expr;
 };
 struct BreakStat : public Statement {};
 struct ContinueStat : public Statement {};
@@ -149,74 +151,72 @@ struct VarExpr : public AssignableExpr {
   Handle<String> name;
 };
 struct MemberExpr : public AssignableExpr {
-  Expression* target;
+  Expression *target;
   Handle<String> name;
 };
 struct IndexExpr : public AssignableExpr {
-  Expression* target;
-  Expression* index;
+  Expression *target;
+  Expression *index;
 };
 struct BinaryExpr : public Expression {
-  Expression* left;
-  Expression* right;
+  Expression *left;
+  Expression *right;
   TokenType opt;
 };
 struct UnaryExpr : public Expression {
-  Expression* expr;
+  Expression *expr;
   TokenType opt;
 };
 struct CallExpr : public Expression {
-  Expression* callee;
-  ZoneList<Expression*> params;
+  Expression *callee;
+  ZoneList<Expression *> params;
 };
 struct AssignExpr : public Expression {
-  AssignableExpr* left;
-  Expression* right;
+  AssignableExpr *left;
+  Expression *right;
   TokenType opt;
 };
 
-inline bool IsAssignableExpr(AstNode* node) {
+inline bool IsAssignableExpr(AstNode *node) {
   switch (node->type) {
-    case AstNodeType::VarExpr:
-    case AstNodeType::MemberExpr:
-    case AstNodeType::IndexExpr:
-      return true;
+  case AstNodeType::VarExpr:
+  case AstNodeType::MemberExpr:
+  case AstNodeType::IndexExpr:
+    return true;
   }
   return false;
 }
 
-template <class T>
-inline T* AllocNode();
-#define AllocNode_ITERATOR(T)                         \
-  template <>                                         \
-  inline T* AllocNode<T>() {                          \
-    T* p = (T*)CompilingMemoryZone::Alloc(sizeof(T)); \
-    new (p) T();                                      \
-    p->type = AstNodeType::T;                         \
-    return p;                                         \
-  }                                                   \
-  inline T* Alloc##T() { return AllocNode<T>(); }
+template <class T> inline T *AllocNode();
+#define AllocNode_ITERATOR(T)                                                  \
+  template <> inline T *AllocNode<T>() {                                       \
+    T *p = (T *)CompilingMemoryZone::Alloc(sizeof(T));                         \
+    new (p) T();                                                               \
+    p->type = AstNodeType::T;                                                  \
+    return p;                                                                  \
+  }                                                                            \
+  inline T *Alloc##T() { return AllocNode<T>(); }
 ITER_ASTNODE(AllocNode_ITERATOR)
 #undef AllocNode_ITERATOR
 class ASTVisitor {
- public:
+public:
   virtual ~ASTVisitor(){};
-  void Visit(AstNode* node) {
-#define ASTVisitor_DISPATCH_VIS_ITER(T)                \
-  case AstNodeType::T:                                 \
-    return this->Visit##T(reinterpret_cast<T*>(node)); \
+  void Visit(AstNode *node) {
+#define ASTVisitor_DISPATCH_VIS_ITER(T)                                        \
+  case AstNodeType::T:                                                         \
+    return this->Visit##T(reinterpret_cast<T *>(node));                        \
     break;
     switch (node->type) {
       ITER_ASTNODE(ASTVisitor_DISPATCH_VIS_ITER);
-      default:
-        ASSERT(0);
-        break;
+    default:
+      ASSERT(0);
+      break;
     }
 #undef ASTVisitor_DISPATCH_VIS_ITER
   }
-#define ASTVisitor_DEF_VIS_ITER(T)    \
-  virtual void Visit##T(T* node) = 0; \
-  void Visit(T* node) { return Visit##T(node); }
+#define ASTVisitor_DEF_VIS_ITER(T)                                             \
+  virtual void Visit##T(T *node) = 0;                                          \
+  void Visit(T *node) { return Visit##T(node); }
   ITER_ASTNODE(ASTVisitor_DEF_VIS_ITER)
 #undef ASTVisitor_DEF_VIS_ITER
 };
@@ -307,5 +307,5 @@ class ASTVisitor {
 //  void Visit(AstNode* node) { node->Accept(this); }
 //
 //};
-}  // namespace internal
-}  // namespace rapid
+} // namespace internal
+} // namespace rapid

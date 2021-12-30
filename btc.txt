@@ -1,5 +1,5 @@
-fuction '#global'@0000024B12BFBFD0:
-  instructions:
+fuction '#global'@000002B6A9BCC010:
+  instructions(56 bytes):
     000: CLOSURE 1
     003: CALL 0
     006: STOREL 0
@@ -15,33 +15,42 @@ fuction '#global'@0000024B12BFBFD0:
     034: CALL 1
     037: CALL 1
     040: POP
-    041: RETNULL
-  locals(1):
+    041: LOADL 1
+    044: LOADK 0
+    047: GET_M
+    048: LOADK 1
+    051: CALL 1
+    054: POP
+    055: RETNULL
+  locals(2):
     0 n
-  consts(0):
+    1 console
+  consts(2):
+    0 'print'
+    1 123
   inner func(4):
-    0 'print'@0000024B12BFC170
-    1 'input'@0000024B12BFC200
-    2 'fib1'@0000024B12BFC290
-    3 'fib2'@0000024B12BFC3B0
+    0 'print'@000002B6A9BCC1C0
+    1 'input'@000002B6A9BCC250
+    2 'fib1'@000002B6A9BCC2E0
+    3 'fib2'@000002B6A9BCC400
 
-fuction 'print'@0000024B12BFC170:
-  instructions:
+fuction 'print'@000002B6A9BCC1C0:
+  instructions(1 bytes):
     000: RETNULL
   locals(1):
     0 x
   consts(0):
   inner func(0):
 
-fuction 'input'@0000024B12BFC200:
-  instructions:
+fuction 'input'@000002B6A9BCC250:
+  instructions(1 bytes):
     000: RETNULL
   locals(0):
   consts(0):
   inner func(0):
 
-fuction 'fib1'@0000024B12BFC290:
-  instructions:
+fuction 'fib1'@000002B6A9BCC2E0:
+  instructions(38 bytes):
     000: LOADL 0
     003: LOADK 0
     006: LE
@@ -67,8 +76,8 @@ fuction 'fib1'@0000024B12BFC290:
     1 1
   inner func(0):
 
-fuction 'fib2'@0000024B12BFC3B0:
-  instructions:
+fuction 'fib2'@000002B6A9BCC400:
+  instructions(66 bytes):
     000: LOADK 0
     003: STOREL 1
     006: LOADK 0
@@ -84,14 +93,14 @@ fuction 'fib2'@0000024B12BFC3B0:
     034: LOADL 1
     037: LOADL 2
     040: ADD
-    041: STOREL 1
-    044: POP
+    041: COPY
+    042: STOREL 1
     045: LOADL 1
-    048: STOREL 2
-    051: POP
+    048: COPY
+    049: STOREL 2
     052: LOADK 0
-    055: STOREL 3
-    058: POP
+    055: COPY
+    056: STOREL 3
     059: JMP -41
     062: LOADL 1
     065: RET
@@ -105,5 +114,4 @@ fuction 'fib2'@0000024B12BFC3B0:
     0 1
     1 3
   inner func(0):
-
 

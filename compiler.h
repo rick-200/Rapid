@@ -33,12 +33,12 @@ namespace rapid {
 namespace internal {
 
 class TokenStream : public Malloced {
-  const char* ps;
+  const char *ps;
   uint32_t row, col;
   Token t;
   List<char> buffer;
 
- private:
+private:
   void Step(int step = 1);
   void InitToken(TokenType type);
   void ReadTokenIntOrFloat();
@@ -46,12 +46,12 @@ class TokenStream : public Malloced {
   void ReadTokenString();
   void ReadToken();
 
- public:
-  TokenStream(const char* s);
-  Token& peek();
+public:
+  TokenStream(const char *s);
+  Token &peek();
   void consume();
 };
-inline bool basic_obj_equal(Object* a, Object* b) {
+inline bool basic_obj_equal(Object *a, Object *b) {
   if (a->IsInteger()) {
     return b->IsInteger() &&
            Integer::cast(a)->value() == Integer::cast(b)->value();
@@ -217,8 +217,8 @@ class BinopParserParam {
   uint64_t val;
   static_assert((int)TokenType::__SIZE < 64);
 
- public:
-  constexpr BinopParserParam(const std::initializer_list<TokenType>& list)
+public:
+  constexpr BinopParserParam(const std::initializer_list<TokenType> &list)
       : val(0) {
     for (auto t : list) {
       val |= (1ULL << (int)t);
@@ -226,196 +226,207 @@ class BinopParserParam {
   }
   bool test(TokenType t) const { return (val >> (int)t) & 1; }
 };
+
 // constexpr BinopParserParam bpp = {TokenType::ADD};
 class Parser {
-  TokenStream* m_ts;
-
- private:
- private:
+  TokenStream *m_ts;
+  
+private:
+private:
 #define TK m_ts->peek()
 #define CONSUME m_ts->consume()
-#define REQUIRE(_t)          \
-  if (TK.t != _t) VERIFY(0); \
-  CONSUME
+#define REQUIRE(_t)                                                            \
+  do {                                                                         \
+    if (TK.t != _t)                                                            \
+      VERIFY(0);                                                               \
+    CONSUME;                                                                    \
+  } while (0)
 
-  Expression* ParseFactor() {
+  Expression *ParseFactor() {
     switch (TK.t) {
-      case TokenType::SYMBOL: {
-        VarExpr* p = AllocVarExpr();
-        p->name = Handle<String>::cast(TK.v);
-        CONSUME;
-        return p;
-      }
-      case TokenType::KVAL: {
-        Literal* p = AllocLiteral();
-        p->value = TK.v;
-        CONSUME;
-        return p;
-      }
-      case TokenType::BK_SL: {  //(
-        CONSUME;
-        Expression* p = ParseExpression();
-        REQUIRE(TokenType::BK_SR);
-        return p;
-      }
+    case TokenType::SYMBOL: {
+      VarExpr *p = AllocVarExpr();
+      p->name = Handle<String>::cast(TK.v);
+      CONSUME;
+      return p;
+    }
+    case TokenType::KVAL: {
+      Literal *p = AllocLiteral();
+      p->value = TK.v;
+      CONSUME;
+      return p;
+    }
+    case TokenType::BK_SL: { //(
+      CONSUME;
+      Expression *p = ParseExpression();
+      REQUIRE(TokenType::BK_SR);
+      return p;
+    }
     }
     return nullptr;
   }
-  Expression* ParseUnary() {
+  Expression *ParseUnary() {
     switch (TK.t) {
-      case TokenType::ADD:
-      case TokenType::SUB:
-      case TokenType::NOT:
-      case TokenType::BNOT: {  //右结合
-        UnaryExpr* p = AllocUnaryExpr();
-        p->opt = TK.t;
-        CONSUME;
-        p->expr = ParseUnary();
-        VERIFY(p->expr);
-        return p;
-      }
+    case TokenType::ADD:
+    case TokenType::SUB:
+    case TokenType::NOT:
+    case TokenType::BNOT: { //右结合
+      UnaryExpr *p = AllocUnaryExpr();
+      p->opt = TK.t;
+      CONSUME;
+      p->expr = ParseUnary();
+      VERIFY(p->expr);
+      return p;
+    }
     }
     return ParseFactor();
   }
-  Expression* ParseInvokeOrGetMemberOrGetIndex() {
-    Expression* upper = ParseUnary();
-    if (upper == nullptr) return nullptr;
+  Expression *ParseInvokeOrGetMemberOrGetIndex() {
+    Expression *upper = ParseUnary();
+    if (upper == nullptr)
+      return nullptr;
     while (true) {
       switch (TK.t) {
-        case TokenType::BK_SL: {  // (
-          CallExpr* p = AllocCallExpr();
-          p->callee = upper;
-          CONSUME;
-          if (TK.t != TokenType::BK_SR) {
-            while (true) {
-              Expression* param = ParseExpression();
-              VERIFY(param);
-              p->params.push(param);
-              if (TK.t != TokenType::COMMA) break;
-              CONSUME;
-            }
+      case TokenType::BK_SL: { // (
+        CallExpr *p = AllocCallExpr();
+        p->callee = upper;
+        CONSUME;
+        if (TK.t != TokenType::BK_SR) {
+          while (true) {
+            Expression *param = ParseExpression();
+            VERIFY(param);
+            p->params.push(param);
+            if (TK.t != TokenType::COMMA)
+              break;
+            CONSUME;
           }
-          REQUIRE(TokenType::BK_SR);
-          upper = p;
-          break;
         }
-        case TokenType::BK_ML: {  // [
-          CONSUME;
-          IndexExpr* p = AllocIndexExpr();
-          p->target = upper;
-          p->index = ParseExpression();
-          REQUIRE(TokenType::BK_MR);
-          upper = p;
-          break;
-        }
-        case TokenType::DOT: {  // .
-          CONSUME;
-          MemberExpr* p = AllocMemberExpr();
-          p->target = upper;
-          if (TK.t != TokenType::SYMBOL) VERIFY(0);
-          p->name = Handle<String>::cast(TK.v);
-          CONSUME;
-          upper = p;
-          break;
-        }
-        default:
-          return upper;
+        REQUIRE(TokenType::BK_SR);
+        upper = p;
+        break;
       }
-    }  // while(1)
+      case TokenType::BK_ML: { // [
+        CONSUME;
+        IndexExpr *p = AllocIndexExpr();
+        p->target = upper;
+        p->index = ParseExpression();
+        REQUIRE(TokenType::BK_MR);
+        upper = p;
+        break;
+      }
+      case TokenType::DOT: { // .
+        CONSUME;
+        MemberExpr *p = AllocMemberExpr();
+        p->target = upper;
+        if (TK.t != TokenType::SYMBOL)
+          VERIFY(0);
+        p->name = Handle<String>::cast(TK.v);
+        CONSUME;
+        upper = p;
+        break;
+      }
+      default:
+        return upper;
+      }
+    } // while(1)
   }
-  Expression* _ParseBinaryImpl(const BinopParserParam* param,
-                               Expression* (Parser::*UpperParserFunc)()) {
-    BinaryExpr* p = AllocBinaryExpr();
+  Expression *_ParseBinaryImpl(const BinopParserParam *param,
+                               Expression *(Parser::*UpperParserFunc)()) {
+    BinaryExpr *p = AllocBinaryExpr();
     p->left = (this->*UpperParserFunc)();
-    if (p->left == nullptr) return nullptr;
+    if (p->left == nullptr)
+      return nullptr;
     while (true) {
-      if (!param->test(TK.t)) break;
+      if (!param->test(TK.t))
+        break;
       p->opt = TK.t;
       CONSUME;
       p->right = (this->*UpperParserFunc)();
-      BinaryExpr* new_p = AllocBinaryExpr();
-      new_p->left = p;  //左结合
+      BinaryExpr *new_p = AllocBinaryExpr();
+      new_p->left = p; //左结合
       p = new_p;
     }
     return p->left;
   }
 #define _BPP(_x) TokenType::_x
-#define _PARSE_BINOP_IMPL(_upper, ...)                     \
-  static constexpr BinopParserParam param = {__VA_ARGS__}; \
+#define _PARSE_BINOP_IMPL(_upper, ...)                                         \
+  static constexpr BinopParserParam param = {__VA_ARGS__};                     \
   return _ParseBinaryImpl(&param, &Parser::_upper);
-  Expression* ParseMulDivMod() {
+  Expression *ParseMulDivMod() {
     _PARSE_BINOP_IMPL(ParseInvokeOrGetMemberOrGetIndex, _BPP(MUL), _BPP(IDIV),
                       _BPP(FDIV), _BPP(MOD));
   }
-  Expression* ParseAddSub() {
+  Expression *ParseAddSub() {
     _PARSE_BINOP_IMPL(ParseMulDivMod, _BPP(ADD), _BPP(SUB));
   }
-  Expression* ParseBitop() {
+  Expression *ParseBitop() {
     _PARSE_BINOP_IMPL(ParseAddSub, _BPP(BAND), _BPP(BOR), _BPP(BXOR), _BPP(SHL),
                       _BPP(SHR));
   }
-  Expression* ParseCmpop() {
+  Expression *ParseCmpop() {
     _PARSE_BINOP_IMPL(ParseBitop, _BPP(EQ), _BPP(NEQ), _BPP(LT), _BPP(GT),
                       _BPP(LE), _BPP(GE));
   }
-  Expression* ParseLogicop() {
+  Expression *ParseLogicop() {
     _PARSE_BINOP_IMPL(ParseCmpop, _BPP(AND), _BPP(OR));
   }
-  Expression* ParseAssignop() {  // = += -= ... 右结合
-    Expression* left = ParseLogicop();
-    if (left == nullptr) return nullptr;
+  Expression *ParseAssignop() { // = += -= ... 右结合
+    Expression *left = ParseLogicop();
+    if (left == nullptr)
+      return nullptr;
     switch (TK.t) {
-      case TokenType::ASSIGN:
-      case TokenType::ADD_ASSIGN:
-      case TokenType::SUB_ASSIGN:
-      case TokenType::MUL_ASSIGN:
-      case TokenType::IDIV_ASSIGN:
-      case TokenType::FDIV_ASSIGN:
-      case TokenType::BAND_ASSIGN:
-      case TokenType::BOR_ASSIGN:
-      case TokenType::BXOR_ASSIGN:
-        VERIFY(IsAssignableExpr(left));
-        AssignExpr* p = AllocAssignExpr();
-        p->opt = TK.t;
-        p->left = (AssignableExpr*)left;
-        CONSUME;
-        p->right = ParseAssignop();  //右结合
-        return p;
+    case TokenType::ASSIGN:
+    case TokenType::ADD_ASSIGN:
+    case TokenType::SUB_ASSIGN:
+    case TokenType::MUL_ASSIGN:
+    case TokenType::IDIV_ASSIGN:
+    case TokenType::FDIV_ASSIGN:
+    case TokenType::BAND_ASSIGN:
+    case TokenType::BOR_ASSIGN:
+    case TokenType::BXOR_ASSIGN:
+      VERIFY(IsAssignableExpr(left));
+      AssignExpr *p = AllocAssignExpr();
+      p->opt = TK.t;
+      p->left = (AssignableExpr *)left;
+      CONSUME;
+      p->right = ParseAssignop(); //右结合
+      return p;
     }
     return left;
   }
-  Expression* ParseBinary() { return ParseAssignop(); }
-  Expression* ParseExpression() { return ParseAssignop(); }
-  IfStat* ParseIF() {
-    IfStat* p = AllocIfStat();
+  Expression *ParseBinary() { return ParseAssignop(); }
+  Expression *ParseExpression() { return ParseAssignop(); }
+  IfStat *ParseIF() {
+    IfStat *p = AllocIfStat();
     ASSERT(TK.t == TokenType::IF);
     CONSUME;
-    REQUIRE(TokenType::BK_SL);  //(
+    REQUIRE(TokenType::BK_SL); //(
     p->cond = ParseExpression();
     VERIFY(p->cond);
-    REQUIRE(TokenType::BK_SR);  //)
+    REQUIRE(TokenType::BK_SR); //)
     p->then_stat = TryParseStatement();
     if (TK.t == TokenType::ELSE) {
       p->else_stat = TryParseStatement();
     }
     return p;
   }
-  ReturnStat* ParseReturn() {
+  ReturnStat *ParseReturn() {
     ASSERT(TK.t == TokenType::RETURN);
     CONSUME;
-    ReturnStat* p = AllocReturnStat();
+    ReturnStat *p = AllocReturnStat();
     if (TK.t == TokenType::SEMI) {
       p->expr = nullptr;
     } else {
       p->expr = ParseExpression();
       VERIFY(p->expr);
     }
+    REQUIRE(TokenType::SEMI);
     return p;
   }
-  LoopStat* ParseWhile() {  // TODO
+  LoopStat *ParseWhile() { // TODO
     ASSERT(TK.t == TokenType::WHILE);
     CONSUME;
-    LoopStat* p = AllocLoopStat();
+    LoopStat *p = AllocLoopStat();
     p->loop_type = LoopStat::Type::WHILE;
     REQUIRE(TokenType::BK_SL);
     p->cond = ParseExpression();
@@ -425,24 +436,31 @@ class Parser {
     VERIFY(p->body);
     return p;
   }
-  LoopStat* ParseFor() {  // TODO
+  LoopStat *ParseFor() { // TODO
     ASSERT(TK.t == TokenType::FOR);
     CONSUME;
-    LoopStat* p = AllocLoopStat();
+    LoopStat *p = AllocLoopStat();
     p->loop_type = LoopStat::Type::FOR;
     REQUIRE(TokenType::BK_SL);
     if (TK.t != TokenType::SEMI) {
-      p->init = TryParseStatement();
-      VERIFY(p->init);
+      if (TK.t == TokenType::VAR) {
+        p->init = ParseVarDecl();
+        VERIFY(p->init);
+      } else {
+        p->init = ParseExprStat();
+        VERIFY(p->init);
+      }
+      //';'已被消耗
+    } else {
+      CONSUME; //;
     }
-    CONSUME;  //;
     if (TK.t != TokenType::SEMI) {
       p->cond = ParseExpression();
       VERIFY(p->cond);
     }
-    CONSUME;  //;
+    CONSUME; //;
     if (TK.t != TokenType::BK_SR) {
-      p->after = TryParseStatement();
+      p->after = ParseExprStat(false);
       VERIFY(p->after);
     }
     REQUIRE(TokenType::BK_SR);
@@ -451,14 +469,15 @@ class Parser {
     return p;
   }
 
-  VarDecl* ParseVarDecl() {
+  VarDecl *ParseVarDecl() {
     ASSERT(TK.t == TokenType::VAR);
     CONSUME;
-    VarDecl* p = AllocVarDecl();
-    if (TK.t != TokenType::SYMBOL) VERIFY(0);
+    VarDecl *p = AllocVarDecl();
+    if (TK.t != TokenType::SYMBOL)
+      VERIFY(0);
 
     while (TK.t == TokenType::SYMBOL) {
-      Expression* init = nullptr;
+      Expression *init = nullptr;
       Handle<String> name = Handle<String>::cast(TK.v);
       CONSUME;
       if (TK.t == TokenType::ASSIGN) {
@@ -475,87 +494,101 @@ class Parser {
         VERIFY(0);
       }
     }
+    REQUIRE(TokenType::SEMI);
     return p;
   }
-  BlockStat* ParseBlock() {
-    BlockStat* p = AllocBlockStat();
+  BlockStat *ParseBlock() {
+    BlockStat *p = AllocBlockStat();
     REQUIRE(TokenType::BK_LL);
     while (TK.t != TokenType::BK_LR) {
-      Statement* s = TryParseStatement();
-      if (s == nullptr) break;
+      Statement *s = TryParseStatement();
+      if (s == nullptr)
+        break;
       p->stat.push(s);
     }
     REQUIRE(TokenType::BK_LR);
     return p;
   }
-  Statement* TryParseStatement() {
-  l_begin:
-    switch (TK.t) {
-      case TokenType::IF:
-        return ParseIF();
-      case TokenType::FOR:
-        return ParseFor();
-      case TokenType::WHILE:
-        return ParseWhile();
-      case TokenType::BREAK:
-        CONSUME;
-        return AllocBreakStat();
-      case TokenType::CONTINUE:
-        CONSUME;
-        return AllocContinueStat();
-      case TokenType::RETURN:
-        return ParseReturn();
-      case TokenType::FUNC:
-        return ParseFunctionDecl();
-      case TokenType::VAR:
-        return ParseVarDecl();
-      case TokenType::BK_LL:  //{
-        return ParseBlock();
-      case TokenType::SEMI:
-        CONSUME;
-        goto l_begin;
-        break;
-      case TokenType::END:
-        return nullptr;
-    }
-    ExpressionStat* p = AllocExpressionStat();
+  ExpressionStat *ParseExprStat(bool need_semi = true) {
+    ExpressionStat *p = AllocExpressionStat();
     p->expr = ParseExpression();
-    if (p->expr == nullptr) return nullptr;
+    if (p->expr == nullptr)
+      return nullptr;
+    if (need_semi)
+      REQUIRE(TokenType::SEMI);
     return p;
   }
+  Statement *TryParseStatement() {
+  l_begin:
+    switch (TK.t) {
+    case TokenType::IF:
+      return ParseIF();
+    case TokenType::FOR:
+      return ParseFor();
+    case TokenType::WHILE:
+      return ParseWhile();
+    case TokenType::BREAK:
+      CONSUME;
+      REQUIRE(TokenType::SEMI);
+      return AllocBreakStat();
+    case TokenType::CONTINUE:
+      CONSUME;
+      REQUIRE(TokenType::SEMI);
+      return AllocContinueStat();
+    case TokenType::RETURN:
+      return ParseReturn();
+    case TokenType::FUNC:
+      return ParseFunctionDecl();
+    case TokenType::VAR:
+      return ParseVarDecl();
+    case TokenType::BK_LL: //{
+      return ParseBlock();
+    case TokenType::SEMI:
+      CONSUME;
+      goto l_begin;
+      break;
+    case TokenType::END:
+      return nullptr;
+    }
+    return ParseExprStat();
+  }
 
-  FuncDecl* ParseFunctionDecl() {
+  FuncDecl *ParseFunctionDecl() {
     ASSERT(TK.t == TokenType::FUNC);
     CONSUME;
-    if (TK.t != TokenType::SYMBOL) VERIFY(0);
-    FuncDecl* p = AllocFuncDecl();
+    if (TK.t != TokenType::SYMBOL)
+      VERIFY(0);
+    FuncDecl *p = AllocFuncDecl();
     p->name = Handle<String>::cast(TK.v);
     CONSUME;
-    REQUIRE(TokenType::BK_SL);  // (
+    REQUIRE(TokenType::BK_SL); // (
     if (TK.t == TokenType::SYMBOL) {
       while (true) {
-        if (TK.t != TokenType::SYMBOL) VERIFY(0);
+        if (TK.t != TokenType::SYMBOL)
+          VERIFY(0);
         p->param.push(Handle<String>::cast(TK.v));
         CONSUME;
-        if (TK.t != TokenType::COMMA) break;
+        if (TK.t != TokenType::COMMA)
+          break;
         CONSUME;
       };
     }
-    REQUIRE(TokenType::BK_SR);  // )
+    REQUIRE(TokenType::BK_SR); // )
     p->body = ParseBlock();
     return p;
   }
 
- public:
+public:
   Parser() : m_ts(nullptr) {}
-  FuncDecl* ParseModule(Handle<String> s) {
+  FuncDecl *ParseModule(Handle<String> s) {
     m_ts = new TokenStream(s->cstr());
-    FuncDecl* p = AllocFuncDecl();
+    FuncDecl *p = AllocFuncDecl();
     p->name = Factory::NewString("#global");
     p->body = AllocBlockStat();
     while (TK.t != TokenType::END) {
-      Statement* s = TryParseStatement();
-      if (s == nullptr && TK.t == TokenType::END) break;
+      Statement *s = TryParseStatement();
+      if (s == nullptr && TK.t == TokenType::END)
+        break;
       VERIFY(s);
       p->body->stat.push(s);
     }
@@ -576,7 +609,7 @@ struct FunctionCtx {
   ZoneList<VarCtx> var;
   ZoneList<ExtVarCtx> extvar;
   ZoneList<Handle<Object>> kpool;
-  ZoneList<FunctionCtx*> inner_func;
+  ZoneList<FunctionCtx *> inner_func;
   ZoneList<uint8_t> cmd;
   size_t top;
   size_t max_stack;
@@ -596,32 +629,33 @@ struct LoopCtx {
   ZoneList<Codepos> continue_pos;
   ZoneList<Codepos> break_pos;
 };
-inline FunctionCtx* AllocFunctionCtx() {
-  FunctionCtx* p =
-      (FunctionCtx*)CompilingMemoryZone::Alloc(sizeof(FunctionCtx)); 
+inline FunctionCtx *AllocFunctionCtx() {
+  FunctionCtx *p =
+      (FunctionCtx *)CompilingMemoryZone::Alloc(sizeof(FunctionCtx));
   new (p) FunctionCtx();
   return p;
 }
-inline LoopCtx* AllocLoopCtx() {
-  LoopCtx* p = (LoopCtx*)CompilingMemoryZone::Alloc(sizeof(FunctionCtx));
+inline LoopCtx *AllocLoopCtx() {
+  LoopCtx *p = (LoopCtx *)CompilingMemoryZone::Alloc(sizeof(FunctionCtx));
   new (p) LoopCtx();
   return p;
 }
+
 // TODO: stroe后的pop
 class CodeGenerator : public ASTVisitor {
-  FunctionCtx* ctx;
-  LoopCtx* loop_ctx;
+  FunctionCtx *ctx;
+  LoopCtx *loop_ctx;
 
- public:
+public:
   CodeGenerator() : ctx(nullptr), loop_ctx(nullptr) {}
-  Handle<SharedFunctionData> Generate(FuncDecl* fd) {
+  Handle<SharedFunctionData> Generate(FuncDecl *fd) {
     Visit(fd);
     return Translate(ctx);
   }
 
- private:
+private:
   //将FunctionCtx转换为SharedFunctionData
-  static inline Handle<SharedFunctionData> Translate(FunctionCtx* ctx) {
+  static inline Handle<SharedFunctionData> Translate(FunctionCtx *ctx) {
     Handle<SharedFunctionData> sfd = Factory::NewSharedFunctionData();
     sfd->name = *ctx->name;
     sfd->max_stack = ctx->max_stack;
@@ -646,44 +680,50 @@ class CodeGenerator : public ASTVisitor {
     return sfd;
   }
 
- private:
+private:
   Codepos CurrentPos() { return (Codepos)ctx->cmd.size(); }
   Codepos PrepareJump() {
     Codepos cp = CurrentPos();
-    Append(Opcode::JMP);
-    Append((uint16_t)0);
+    AppendOp(Opcode::JMP);
+    AppendU16((uint16_t)0);
     return cp;
   }
   Codepos PrepareJumpIf(bool cond) {
     Codepos cp = CurrentPos();
-    Append(cond ? Opcode::JMP_T : Opcode::JMP_F);
-    Append((uint16_t)0);
+    AppendOp(cond ? Opcode::JMP_T : Opcode::JMP_F);
+    AppendU16((uint16_t)0);
     return cp;
   }
   void ApplyJump(Codepos from, Codepos to) {
     Opcode op = (Opcode)ctx->cmd[(int)from];
-    int16_t* jp = (int16_t*)&ctx->cmd[(int)from + 1];
+    int16_t *jp = (int16_t *)&ctx->cmd[(int)from + 1];
     ASSERT(op == Opcode::JMP || op == Opcode::JMP_T || op == Opcode::JMP_F);
     ASSERT(*jp == 0);
     int diff = (int)to - (int)from;
     ASSERT(diff >= INT16_MIN && diff <= INT16_MAX);
     *jp = (int16_t)diff;
   }
-  void Append(uint8_t v) { ctx->cmd.push(v); }
-  void Append(uint16_t v) {
-    ctx->cmd.push(*((uint8_t*)&v + 0));
-    ctx->cmd.push(*((uint8_t*)&v + 1));
-    ASSERT(v == *(uint16_t*)&ctx->cmd[ctx->cmd.size() - 2]);
+  void AppendU8(uint8_t v) { ctx->cmd.push(v); }
+  void AppendU16(uint16_t v) {
+    ctx->cmd.push(*((uint8_t *)&v + 0));
+    ctx->cmd.push(*((uint8_t *)&v + 1));
+    ASSERT(v == *(uint16_t *)&ctx->cmd[ctx->cmd.size() - 2]);
   }
-  void Append(uint32_t v) {
-    ctx->cmd.push(*((uint8_t*)&v + 0));
-    ctx->cmd.push(*((uint8_t*)&v + 1));
-    ctx->cmd.push(*((uint8_t*)&v + 2));
-    ctx->cmd.push(*((uint8_t*)&v + 3));
-    ASSERT(v == *(uint32_t*)&ctx->cmd[ctx->cmd.size() - 4]);
+  void AppendU32(uint32_t v) {
+    ctx->cmd.push(*((uint8_t *)&v + 0));
+    ctx->cmd.push(*((uint8_t *)&v + 1));
+    ctx->cmd.push(*((uint8_t *)&v + 2));
+    ctx->cmd.push(*((uint8_t *)&v + 3));
+    ASSERT(v == *(uint32_t *)&ctx->cmd[ctx->cmd.size() - 4]);
   }
-  void Append(int16_t v) { Append(*(uint16_t*)&v); }
-  void Append(Opcode op) { Append((uint8_t)op); }
+  void AppendS16(int16_t v) { AppendU16(*(uint16_t *)&v); }
+  void AppendOp(Opcode op) { AppendU8((uint8_t)op); }
+  void push() {
+    ++ctx->top;
+    if (ctx->top > ctx->max_stack)
+      ctx->max_stack = ctx->top;
+  }
+  void pop(uint16_t size = 1) { ctx->top -= size; }
   uint16_t AddVar(Handle<String> name) {
     uint16_t pos = (uint16_t)ctx->var.size();
     VarCtx vc;
@@ -713,51 +753,61 @@ class CodeGenerator : public ASTVisitor {
     ++ctx->top;
     ctx->max_stack = std::max(ctx->max_stack, ctx->top);
     uint16_t pos = FindConst(v);
-    Append(Opcode::LOADK);
-    Append(pos);
+    AppendOp(Opcode::LOADK);
+    AppendU16(pos);
+    push();
   }
   //尝试生成LoadL指令，若成功，返回true
   bool LoadL(Handle<String> name) {
     ++ctx->top;
     ctx->max_stack = std::max(ctx->max_stack, ctx->top);
     uint16_t pos = FindVar(name);
-    if (pos == (uint16_t)-1) return false;
-    Append(Opcode::LOADL);
-    Append((uint16_t)pos);
+    if (pos == (uint16_t)-1)
+      return false;
+    AppendOp(Opcode::LOADL);
+    AppendU16((uint16_t)pos);
+    push();
     return true;
   }
   //尝试生成Closure指令，若成功，返回true
   bool Closure(Handle<String> name) {
     for (size_t i = 0; i < ctx->inner_func.size(); i++) {
       if (String::Equal(*ctx->inner_func[i]->name, *name)) {
-        Append(Opcode::CLOSURE);
-        Append((uint16_t)i);
+        AppendOp(Opcode::CLOSURE);
+        AppendU16((uint16_t)i);
+        push();
         return true;
       }
     }
     return false;
   }
+  void Call(uint16_t param_cnt /*不包括被调用对象*/) {
+    AppendOp(Opcode::CALL);
+    AppendU16(param_cnt);
+    pop(param_cnt); //剩一个返回值
+  }
 
- private:
+private:
   // 通过 ASTVisitor 继承
-  virtual void VisitExpressionStat(ExpressionStat* node);
-  virtual void VisitLiteral(Literal* node);
-  virtual void VisitBlockStat(BlockStat* node);
-  virtual void VisitIfStat(IfStat* node);
-  virtual void VisitLoopStat(LoopStat* node);
-  virtual void VisitVarDecl(VarDecl* node);
-  virtual void VisitFuncDecl(FuncDecl* node);
-  virtual void VisitReturnStat(ReturnStat* node);
-  virtual void VisitBreakStat(BreakStat* node);
-  virtual void VisitContinueStat(ContinueStat* node);
-  virtual void VisitVarExpr(VarExpr* node);
-  virtual void VisitMemberExpr(MemberExpr* node);
-  virtual void VisitIndexExpr(IndexExpr* node);
-  virtual void VisitUnaryExpr(UnaryExpr* node);
-  virtual void VisitBinaryExpr(BinaryExpr* node);
-  virtual void VisitAssignExpr(AssignExpr* node);
-  virtual void VisitCallExpr(CallExpr* node);
+  virtual void VisitExpressionStat(ExpressionStat *node);
+  virtual void VisitLiteral(Literal *node);
+  virtual void VisitBlockStat(BlockStat *node);
+  virtual void VisitIfStat(IfStat *node);
+  virtual void VisitLoopStat(LoopStat *node);
+  virtual void VisitVarDecl(VarDecl *node);
+  virtual void VisitFuncDecl(FuncDecl *node);
+  virtual void VisitReturnStat(ReturnStat *node);
+  virtual void VisitBreakStat(BreakStat *node);
+  virtual void VisitContinueStat(ContinueStat *node);
+  virtual void VisitVarExpr(VarExpr *node);
+  virtual void VisitMemberExpr(MemberExpr *node);
+  virtual void VisitIndexExpr(IndexExpr *node);
+  virtual void VisitUnaryExpr(UnaryExpr *node);
+  virtual void VisitBinaryExpr(BinaryExpr *node);
+  virtual void VisitAssignExpr(AssignExpr *node);
+  virtual void VisitCallExpr(CallExpr *node);
+  void VisitAssignExpr(AssignExpr *p, bool from_expr_stat);
 };
 
-}  // namespace internal
-}  // namespace rapid
+} // namespace internal
+} // namespace rapid

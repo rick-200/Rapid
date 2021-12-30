@@ -7,48 +7,58 @@ namespace internal {
 class StringBuilder {
   List<char> m_v;
 
- public:
+public:
   StringBuilder() {}
   Handle<String> ToString() {
     return Factory::NewString(m_v.begin(), m_v.size());
   }
   template <typename... TArgs>
-  StringBuilder& AppendFormat(const char* fmt, TArgs... args) {
+  StringBuilder &AppendFormat(const char *fmt, TArgs... args) {
     size_t len = snprintf(nullptr, 0, fmt, args...);
     size_t siz = m_v.size();
     m_v.resize(siz + len + 1);
     snprintf(&m_v[siz], len + 1 /* '\0' */, fmt, args...);
-    m_v.pop();  // 删去 '\0'
+    m_v.pop(); // 删去 '\0'
     return *this;
   }
-  StringBuilder& Append(const char* s, size_t len) {
+  StringBuilder &AppendString(const char *s, size_t len) {
     size_t siz = m_v.size();
     m_v.resize(siz + len);
     memcpy(&m_v[siz], s, len * sizeof(char));
     return *this;
   }
-  StringBuilder& Append(const char* s) { return Append(s, strlen(s)); }
-  StringBuilder& Append(int64_t v) { return AppendFormat("%lld", v); }
-  StringBuilder& Append(double v) { return AppendFormat("%g", v); }
-  StringBuilder& Append(Handle<String> v) {
+  StringBuilder &AppendChar(char c) {
+    m_v.push(c);
+    return *this;
+  }
+  StringBuilder &AppendString(const char *s) {
+    return AppendString(s, strlen(s));
+  }
+  StringBuilder &AppendInt(int64_t v) { return AppendFormat("%lld", v); }
+  StringBuilder &AppendDouble(double v) { return AppendFormat("%g", v); }
+  StringBuilder &AppendString(Handle<String> v) {
     return AppendFormat("%s", v->cstr());
   }
-  StringBuilder& Append(bool v) { return v ? Append("true") : Append("false"); }
-  StringBuilder& Append(Handle<Object> v) {
+  StringBuilder &AppendBool(bool v) {
+    return AppendString(v ? "true" : "false");
+  }
+  StringBuilder &AppendObject(Handle<Object> v) {
     if (v->IsString()) {
-      Append(Handle<String>::cast(v)->cstr());
+      AppendChar('\'');
+      AppendString(Handle<String>::cast(v)->cstr());
+      AppendChar('\'');
     } else if (v->IsInteger()) {
-      Append(Handle<Integer>::cast(v)->value());
+      AppendInt(Handle<Integer>::cast(v)->value());
     } else if (v->IsFloat()) {
-      Append(Handle<Float>::cast(v)->value());
+      AppendDouble(Handle<Float>::cast(v)->value());
     } else if (v->IsBool()) {
-      Append(v->IsTrue());
+      AppendBool(v->IsTrue());
     } else {
-      Append("{object}");
+      AppendString("{object}");
     }
     return *this;
   }
 };
 
-}  // namespace internal
-}  // namespace rapid
+} // namespace internal
+} // namespace rapid

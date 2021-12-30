@@ -5,15 +5,9 @@ namespace rapid {
 namespace internal {
 /*
 
-IABC: 64 = 8   +   8    + 16+16+16
-           op     info    A  B  C
-info: 8 =     2+2       +    4
-          location_info     unused
-IAB:  64 = 8+8+16+16
-IABx: 64 = 8+8+16+32
-IAx:  64 = 8+56
 
-GET_M_CACHED: 64 = 8+16+16+24
+
+
 */
 
 enum class Opcode : uint8_t {
@@ -23,6 +17,7 @@ enum class Opcode : uint8_t {
   LOADK,
   LOADE,
   STOREE,
+  COPY,  //复制栈顶并push到栈上
   POP,
 
   ADD,
@@ -224,7 +219,7 @@ constexpr bool IsBinop(TokenType tt) {
     return true;  // ADD 和 SUB 既是一元又是二元
   return IsOperator(tt) && !IsUnaryop(tt);
 }
-//constexpr bool IsAssignop(TokenType tt) {}
+// constexpr bool IsAssignop(TokenType tt) {}
 typedef uint16_t DChar;
 constexpr DChar make_dchar(char c1, char c2 = '\0') {
   return (((DChar)c2) << 8) | c1;

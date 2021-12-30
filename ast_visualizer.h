@@ -9,15 +9,20 @@ class VisualizerVisitor : public ASTVisitor {
   int m_cnt;
   int ret;
 
- public:
-  VisualizerVisitor(StringBuilder &sb) : m_sb(sb), m_cnt(0) {}
+public:
+  VisualizerVisitor(StringBuilder &sb) : m_sb(sb), m_cnt(0), ret(0) {}
   // Í¨¹ý ASTVisitor ¼Ì³Ð
-  template <class T>
-  void DefNode(const T &v) {
+  void DefNode(Handle<Object> v) {
     ret = ++m_cnt;
     m_sb.AppendFormat("%X[\"", m_cnt);
-    m_sb.Append(v);
-    m_sb.Append("\"]\n");
+    m_sb.AppendObject(v);
+    m_sb.AppendString("\"]\n");
+  }
+  void DefNode(const char *s) {
+    ret = ++m_cnt;
+    m_sb.AppendFormat("%X[\"", m_cnt);
+    m_sb.AppendString(s);
+    m_sb.AppendString("\"]\n");
   }
   void Connect(int l, int r) { m_sb.AppendFormat("%X-->%X\n", l, r); }
   virtual void VisitExpressionStat(ExpressionStat *node) { Visit(node->expr); }
@@ -25,8 +30,8 @@ class VisualizerVisitor : public ASTVisitor {
     if (node->value->IsString()) {
       ret = ++m_cnt;
       m_sb.AppendFormat("%X[\"'", m_cnt);
-      m_sb.Append(node->value);
-      m_sb.Append("'\"]\n");
+      m_sb.AppendObject(node->value);
+      m_sb.AppendString("'\"]\n");
     } else {
       DefNode(node->value);
     }
@@ -65,7 +70,7 @@ class VisualizerVisitor : public ASTVisitor {
     }
     ret = if_;
   }
-  virtual void VisitLoopStat(LoopStat *node) {  // TODO
+  virtual void VisitLoopStat(LoopStat *node) { // TODO
     if (node->loop_type == LoopStat::Type::FOR) {
       DefNode("for");
     } else if (node->loop_type == LoopStat::Type::WHILE) {
@@ -117,12 +122,12 @@ class VisualizerVisitor : public ASTVisitor {
   virtual void VisitFuncDecl(FuncDecl *node) {
     int func = ++m_cnt;
     m_sb.AppendFormat("%X[\"func ", m_cnt);
-    m_sb.Append(node->name);
-    m_sb.Append("(");
+    m_sb.AppendString(node->name);
+    m_sb.AppendString("(");
     for (size_t i = 0; i < node->param.size(); i++) {
-      m_sb.Append(node->param[i]);
+      m_sb.AppendString(node->param[i]);
     }
-    m_sb.Append(")\"]\n");
+    m_sb.AppendString(")\"]\n");
     Visit(node->body);
     int body = ret;
     Connect(func, body);
@@ -161,15 +166,15 @@ class VisualizerVisitor : public ASTVisitor {
     Connect(idxop, index);
     ret = idxop;
   }
-#define VisitBinaryExpr_ITER(t, s) \
-  case t:                          \
-    DefNode(s);                    \
+#define VisitBinaryExpr_ITER(t, s)                                             \
+  case t:                                                                      \
+    DefNode(s);                                                                \
     break;
-#define SWITCH_DEF_NODE                     \
-  switch (node->opt) {                      \
-    TT_ITER_OPERATOR(VisitBinaryExpr_ITER); \
-    default:                                \
-      ASSERT(0);                            \
+#define SWITCH_DEF_NODE                                                        \
+  switch (node->opt) {                                                         \
+    TT_ITER_OPERATOR(VisitBinaryExpr_ITER);                                    \
+  default:                                                                     \
+    ASSERT(0);                                                                 \
   }
   virtual void VisitUnaryExpr(UnaryExpr *node) {
     SWITCH_DEF_NODE;
@@ -225,25 +230,25 @@ inline Handle<String> VisualizeAST(AstNode *node) {
   return sb.ToString();
 }
 
-#define CASE_0(_op)  \
-  case Opcode::_op:  \
-    sb.Append(#_op); \
-    ++pc;            \
+#define CASE_0(_op)                                                            \
+  case Opcode::_op:                                                            \
+    sb.AppendString(#_op);                                                     \
+    ++pc;                                                                      \
     break;
-#define CASE_u16(_op)                                             \
-  case Opcode::_op:                                               \
-    sb.Append(#_op " ").Append((int64_t) * (uint16_t *)(pc + 1)); \
-    pc += 3;                                                      \
+#define CASE_u16(_op)                                                          \
+  case Opcode::_op:                                                            \
+    sb.AppendString(#_op " ").AppendInt(*(uint16_t *)(pc + 1));                \
+    pc += 3;                                                                   \
     break;
-#define CASE_s16(_op)                                            \
-  case Opcode::_op:                                              \
-    sb.Append(#_op " ").Append((int64_t) * (int16_t *)(pc + 1)); \
-    pc += 3;                                                     \
+#define CASE_s16(_op)                                                          \
+  case Opcode::_op:                                                            \
+    sb.AppendString(#_op " ").AppendInt(*(int16_t *)(pc + 1));                 \
+    pc += 3;                                                                   \
     break;
 inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
   StringBuilder sb;
   sb.AppendFormat("fuction '%s'@%p:\n", sfd->name->cstr(), *sfd);
-  sb.Append("  instructions:\n");
+  sb.AppendFormat("  instructions(%llu bytes):\n", sfd->instructions->length());
   uint8_t *pc = sfd->instructions->begin();
   while (pc - sfd->instructions->begin() < sfd->instructions->length()) {
     sb.AppendFormat("    %03d: ", pc - sfd->instructions->begin());
@@ -254,6 +259,7 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
       CASE_u16(LOADK);
       CASE_u16(LOADE);
       CASE_u16(STOREE);
+      CASE_0(COPY);
       CASE_0(ADD);
       CASE_0(SUB);
       CASE_0(MUL);
@@ -291,10 +297,10 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
       CASE_u16(CLOSURE);
       CASE_0(CLOSURE_SELF);
 
-      default:
-        ASSERT(0);
+    default:
+      ASSERT(0);
     }
-    sb.Append("\n");
+    sb.AppendString("\n");
   }
   sb.AppendFormat("  locals(%llu):\n", sfd->vars->length());
   for (size_t i = 0; i < sfd->vars->length(); i++) {
@@ -304,7 +310,7 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
   sb.AppendFormat("  consts(%llu):\n", sfd->kpool->length());
   for (size_t i = 0; i < sfd->kpool->length(); i++) {
     sb.AppendFormat("    %llu ", i);
-    sb.Append(Handle<Object>(sfd->kpool->get(i))).Append("\n");
+    sb.AppendObject(Handle<Object>(sfd->kpool->get(i))).AppendString("\n");
   }
   sb.AppendFormat("  inner func(%llu):\n", sfd->inner_func->length());
   for (size_t i = 0; i < sfd->inner_func->length(); i++) {
@@ -313,13 +319,13 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
         SharedFunctionData::cast(sfd->inner_func->get(i))->name->cstr(),
         SharedFunctionData::cast(sfd->inner_func->get(i)));
   }
-  sb.Append("\n");
+  sb.AppendString("\n");
   for (size_t i = 0; i < sfd->inner_func->length(); i++) {
     Handle<SharedFunctionData> h(
         SharedFunctionData::cast(sfd->inner_func->get(i)));
-    sb.Append(VisualizeByteCode(h));
+    sb.AppendString(VisualizeByteCode(h));
   }
   return sb.ToString();
 }
-}  // namespace internal
-}  // namespace rapid
+} // namespace internal
+} // namespace rapid

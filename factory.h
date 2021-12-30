@@ -6,19 +6,21 @@
 #include "object.h"
 namespace rapid {
 namespace internal {
-#define CALL_HEAP_ALLOC(_t, ...)                           \
-  {                                                        \
-    _t* __pobj_ = Heap::Alloc##_t(__VA_ARGS__);            \
-    if (!__pobj_->IsFailure()) return Handle<_t>(__pobj_); \
-    if (Failure::cast(__pobj_) != Failure::RetryAfterGC)   \
-      return Handle<_t>(__pobj_);                          \
-    Heap::DoGC();                                          \
-    __pobj_ = Heap::Alloc##_t(__VA_ARGS__);                \
-    if (__pobj_->IsFailure()) VERIFY(0);                   \
-    return Handle<_t>(__pobj_);                            \
+#define CALL_HEAP_ALLOC(_t, ...)                                               \
+  {                                                                            \
+    _t *__pobj_ = Heap::Alloc##_t(__VA_ARGS__);                                \
+    if (!__pobj_->IsFailure())                                                 \
+      return Handle<_t>(__pobj_);                                              \
+    if (Failure::cast(__pobj_) != Failure::RetryAfterGC)                       \
+      return Handle<_t>(__pobj_);                                              \
+    Heap::DoGC();                                                              \
+    __pobj_ = Heap::Alloc##_t(__VA_ARGS__);                                    \
+    if (__pobj_->IsFailure())                                                  \
+      VERIFY(0);                                                               \
+    return Handle<_t>(__pobj_);                                                \
   }
 class Factory {
- public:
+public:
   static Handle<Integer> NewInteger(int64_t x) {
     return Handle<Integer>(Integer::FromInt64(x));
   }
@@ -37,10 +39,10 @@ class Factory {
   static Handle<Object> FalseValue() {
     return Handle<Object>(Heap::FalseValue());
   }
-  static Handle<String> NewString(const char* cstr, size_t len) {
+  static Handle<String> NewString(const char *cstr, size_t len) {
     CALL_HEAP_ALLOC(String, cstr, len);
   }
-  static Handle<String> NewString(const char* cstr) {
+  static Handle<String> NewString(const char *cstr) {
     return NewString(cstr, strlen(cstr));
   }
   static Handle<Array> NewArray() { CALL_HEAP_ALLOC(Array); }
@@ -54,11 +56,22 @@ class Factory {
   static Handle<FixedTable> NewFixedTable(size_t size) {
     CALL_HEAP_ALLOC(FixedTable, size);
   }
-#define DEF_NEW_STRUCT(_t) \
+  static Handle<Exception>
+  NewException(Handle<String> type, Handle<String> info, Handle<Object> data) {
+    CALL_HEAP_ALLOC(Exception, *type, *info, *data);
+  }
+  static Handle<Exception> NewException(Handle<String> type,
+                                        Handle<String> info) {
+    CALL_HEAP_ALLOC(Exception, *type, *info, Heap::NullValue());
+  }
+  static Handle<Exception> NewException(Handle<String> type) {
+    CALL_HEAP_ALLOC(Exception, *type, *type, Heap::NullValue());
+  }
+#define DEF_NEW_STRUCT(_t)                                                     \
   static Handle<_t> New##_t() { CALL_HEAP_ALLOC(_t); }
   ITER_STRUCT_DERIVED(DEF_NEW_STRUCT)
 
-};  // namespace internal
+}; // namespace internal
 
-}  // namespace internal
-}  // namespace rapid
+} // namespace internal
+} // namespace rapid
