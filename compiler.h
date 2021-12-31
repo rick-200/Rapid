@@ -25,10 +25,11 @@ unop = ...
 #include "allocation.h"
 #include "ast.h"
 #include "bytecode.h"
+#include "executer.h"
 #include "factory.h"
 #include "list.h"
 #include "preprocessors.h"
-
+#include "stringbuilder.h"
 namespace rapid {
 namespace internal {
 
@@ -230,28 +231,98 @@ public:
 // constexpr BinopParserParam bpp = {TokenType::ADD};
 class Parser {
   TokenStream *m_ts;
-  
+  bool has_error;
+
 private:
+  const char *tokentype_tostr(TokenType tt) {
+    switch (tt) {
+    case TokenType::NUL:
+      return nullptr;
+    case TokenType::END:
+      return "eof";
+    case TokenType::SYMBOL:
+      return "symbol";
+    case TokenType::KVAL:
+      return "literal value";
+#define tokentype_tostr_ITER(T, S)                                             \
+  case T:                                                                      \
+    return "'" S "'";
+      TT_ITER_CONTROL(tokentype_tostr_ITER)
+      TT_ITER_KEWWORD(tokentype_tostr_ITER)
+      TT_ITER_OPERATOR(tokentype_tostr_ITER)
+    default:
+      ASSERT(0);
+    }
+  }
+  void syntax_error(int row, int col, Handle<String> info) {
+    Handle<Exception> e =
+        Factory::NewException(Factory::NewString("syntax_error"), info);
+    Executer::ThrowException(e);
+    has_error = true;
+  }
+  void syntax_error(int row, int col, TokenType now, TokenType need) {
+    StringBuilder sb;
+    const char *now_s = tokentype_tostr(now);
+    ASSERT(now_s);
+    const char *need_s = tokentype_tostr(need);
+    sb.AppendFormat("syntax_error(%d,%d):", row, col);
+    if (now_s != nullptr) {
+      sb.AppendFormat(" unexpected token<%s>", now_s);
+    }
+    if (need_s != nullptr) {
+      if (now_s != nullptr)
+        sb.AppendChar(',');
+      sb.AppendFormat(" token<%s> needed", need_s);
+    }
+    return syntax_error(row, col, sb.ToString());
+  }
+  void unexpected(TokenType need = TokenType::NUL) {
+    syntax_error(m_ts->peek().row, m_ts->peek().col, m_ts->peek().t, need);
+  }
+
 private:
 #define TK m_ts->peek()
 #define CONSUME m_ts->consume()
 #define REQUIRE(_t)                                                            \
   do {                                                                         \
-    if (TK.t != _t)                                                            \
-      VERIFY(0);                                                               \
-    CONSUME;                                                                    \
+    if (TK.t != _t) {                                                          \
+      unexpected(_t);                                                          \
+      return nullptr;                                                          \
+    }                                                                          \
+    CONSUME;                                                                   \
   } while (0)
-
+#define UNEXPECTED_IF(_exp)                                                    \
+  if (_exp) {                                                                  \
+    unexpected();                                                              \
+    return nullptr;                                                            \
+  }
+//参数为Parser函数的返回值，若返回值为null（解析失败），则传递或抛出错误
+#define CHECK_OK(_exp)                                                         \
+  if (_exp == nullptr) {                                                       \
+    if (!has_error)                                                            \
+      unexpected();                                                            \
+    return nullptr;                                                            \
+  }
+//检查当前Token类型是否正确
+#define NEED_CHECK(_t)                                                         \
+  if (TK.t != _t) {                                                            \
+    unexpected(_t);                                                            \
+    return nullptr;                                                            \
+  }
+#define ERRRETURN                                                              \
+  if (has_error)                                                               \
+    return nullptr;
+#define ALLOC_PARAM TK.row, TK.col
   Expression *ParseFactor() {
     switch (TK.t) {
     case TokenType::SYMBOL: {
-      VarExpr *p = AllocVarExpr();
+      VarExpr *p = AllocVarExpr(ALLOC_PARAM);
       p->name = Handle<String>::cast(TK.v);
       CONSUME;
       return p;
     }
     case TokenType::KVAL: {
-      Literal *p = AllocLiteral();
+      Literal *p = AllocLiteral(ALLOC_PARAM);
       p->value = TK.v;
       CONSUME;
       return p;
@@ -263,6 +334,12 @@ private:
       return p;
     }
     }
+    StringBuilder sb;
+    const char *now_t = tokentype_tostr(TK.t);
+    sb.AppendFormat(
+        "syntax_error(%d,%d): unexpected token %s, incomplete expression.",
+        TK.row, TK.col, now_t);
+    syntax_error(TK.row, TK.col, sb.ToString());
     return nullptr;
   }
   Expression *ParseUnary() {
@@ -271,11 +348,11 @@ private:
     case TokenType::SUB:
     case TokenType::NOT:
     case TokenType::BNOT: { //右结合
-      UnaryExpr *p = AllocUnaryExpr();
+      UnaryExpr *p = AllocUnaryExpr(ALLOC_PARAM);
       p->opt = TK.t;
       CONSUME;
       p->expr = ParseUnary();
-      VERIFY(p->expr);
+      CHECK_OK(p->expr);
       return p;
     }
     }
@@ -283,18 +360,17 @@ private:
   }
   Expression *ParseInvokeOrGetMemberOrGetIndex() {
     Expression *upper = ParseUnary();
-    if (upper == nullptr)
-      return nullptr;
+    CHECK_OK(upper);
     while (true) {
       switch (TK.t) {
       case TokenType::BK_SL: { // (
-        CallExpr *p = AllocCallExpr();
+        CallExpr *p = AllocCallExpr(ALLOC_PARAM);
         p->callee = upper;
         CONSUME;
         if (TK.t != TokenType::BK_SR) {
           while (true) {
             Expression *param = ParseExpression();
-            VERIFY(param);
+            CHECK_OK(param);
             p->params.push(param);
             if (TK.t != TokenType::COMMA)
               break;
@@ -307,7 +383,7 @@ private:
       }
       case TokenType::BK_ML: { // [
         CONSUME;
-        IndexExpr *p = AllocIndexExpr();
+        IndexExpr *p = AllocIndexExpr(ALLOC_PARAM);
         p->target = upper;
         p->index = ParseExpression();
         REQUIRE(TokenType::BK_MR);
@@ -316,10 +392,9 @@ private:
       }
       case TokenType::DOT: { // .
         CONSUME;
-        MemberExpr *p = AllocMemberExpr();
+        MemberExpr *p = AllocMemberExpr(ALLOC_PARAM);
         p->target = upper;
-        if (TK.t != TokenType::SYMBOL)
-          VERIFY(0);
+        NEED_CHECK(TokenType::SYMBOL);
         p->name = Handle<String>::cast(TK.v);
         CONSUME;
         upper = p;
@@ -332,17 +407,17 @@ private:
   }
   Expression *_ParseBinaryImpl(const BinopParserParam *param,
                                Expression *(Parser::*UpperParserFunc)()) {
-    BinaryExpr *p = AllocBinaryExpr();
+    BinaryExpr *p = AllocBinaryExpr(ALLOC_PARAM);
     p->left = (this->*UpperParserFunc)();
-    if (p->left == nullptr)
-      return nullptr;
+    CHECK_OK(p->left);
     while (true) {
       if (!param->test(TK.t))
         break;
       p->opt = TK.t;
       CONSUME;
       p->right = (this->*UpperParserFunc)();
-      BinaryExpr *new_p = AllocBinaryExpr();
+      CHECK_OK(p->right);
+      BinaryExpr *new_p = AllocBinaryExpr(ALLOC_PARAM);
       new_p->left = p; //左结合
       p = new_p;
     }
@@ -372,8 +447,7 @@ private:
   }
   Expression *ParseAssignop() { // = += -= ... 右结合
     Expression *left = ParseLogicop();
-    if (left == nullptr)
-      return nullptr;
+    CHECK_OK(left);
     switch (TK.t) {
     case TokenType::ASSIGN:
     case TokenType::ADD_ASSIGN:
@@ -384,12 +458,21 @@ private:
     case TokenType::BAND_ASSIGN:
     case TokenType::BOR_ASSIGN:
     case TokenType::BXOR_ASSIGN:
-      VERIFY(IsAssignableExpr(left));
-      AssignExpr *p = AllocAssignExpr();
+      // VERIFY(IsAssignableExpr(left));//TODO
+      AssignExpr *p = AllocAssignExpr(ALLOC_PARAM);
       p->opt = TK.t;
+      if (!IsAssignableExpr(left)) {
+        StringBuilder sb;
+        sb.AppendFormat(
+            "syntax_error(%d,%d): need assignable expression before '='.",
+            TK.row, TK.col);
+        syntax_error(TK.row, TK.col, sb.ToString());
+        return nullptr;
+      }
       p->left = (AssignableExpr *)left;
       CONSUME;
       p->right = ParseAssignop(); //右结合
+      CHECK_OK(p->right);
       return p;
     }
     return left;
@@ -397,12 +480,11 @@ private:
   Expression *ParseBinary() { return ParseAssignop(); }
   Expression *ParseExpression() { return ParseAssignop(); }
   IfStat *ParseIF() {
-    IfStat *p = AllocIfStat();
-    ASSERT(TK.t == TokenType::IF);
-    CONSUME;
+    IfStat *p = AllocIfStat(ALLOC_PARAM);
+    REQUIRE(TokenType::IF);
     REQUIRE(TokenType::BK_SL); //(
     p->cond = ParseExpression();
-    VERIFY(p->cond);
+    CHECK_OK(p->cond);
     REQUIRE(TokenType::BK_SR); //)
     p->then_stat = TryParseStatement();
     if (TK.t == TokenType::ELSE) {
@@ -411,44 +493,41 @@ private:
     return p;
   }
   ReturnStat *ParseReturn() {
-    ASSERT(TK.t == TokenType::RETURN);
-    CONSUME;
-    ReturnStat *p = AllocReturnStat();
+    REQUIRE(TokenType::RETURN);
+    ReturnStat *p = AllocReturnStat(ALLOC_PARAM);
     if (TK.t == TokenType::SEMI) {
       p->expr = nullptr;
     } else {
       p->expr = ParseExpression();
-      VERIFY(p->expr);
+      CHECK_OK(p->expr);
     }
     REQUIRE(TokenType::SEMI);
     return p;
   }
   LoopStat *ParseWhile() { // TODO
-    ASSERT(TK.t == TokenType::WHILE);
-    CONSUME;
-    LoopStat *p = AllocLoopStat();
+    REQUIRE(TokenType::WHILE);
+    LoopStat *p = AllocLoopStat(ALLOC_PARAM);
     p->loop_type = LoopStat::Type::WHILE;
     REQUIRE(TokenType::BK_SL);
     p->cond = ParseExpression();
-    VERIFY(p->cond);
+    CHECK_OK(p->cond);
     REQUIRE(TokenType::BK_SR);
     p->body = TryParseStatement();
-    VERIFY(p->body);
+    CHECK_OK(p->body);
     return p;
   }
   LoopStat *ParseFor() { // TODO
-    ASSERT(TK.t == TokenType::FOR);
-    CONSUME;
-    LoopStat *p = AllocLoopStat();
+    REQUIRE(TokenType::FOR);
+    LoopStat *p = AllocLoopStat(ALLOC_PARAM);
     p->loop_type = LoopStat::Type::FOR;
     REQUIRE(TokenType::BK_SL);
     if (TK.t != TokenType::SEMI) {
       if (TK.t == TokenType::VAR) {
         p->init = ParseVarDecl();
-        VERIFY(p->init);
+        CHECK_OK(p->init);
       } else {
         p->init = ParseExprStat();
-        VERIFY(p->init);
+        CHECK_OK(p->init);
       }
       //';'已被消耗
     } else {
@@ -456,26 +535,23 @@ private:
     }
     if (TK.t != TokenType::SEMI) {
       p->cond = ParseExpression();
-      VERIFY(p->cond);
+      CHECK_OK(p->cond);
     }
     CONSUME; //;
     if (TK.t != TokenType::BK_SR) {
       p->after = ParseExprStat(false);
-      VERIFY(p->after);
+      CHECK_OK(p->after);
     }
     REQUIRE(TokenType::BK_SR);
     p->body = TryParseStatement();
-    VERIFY(p->body);
+    CHECK_OK(p->body);
     return p;
   }
 
   VarDecl *ParseVarDecl() {
-    ASSERT(TK.t == TokenType::VAR);
-    CONSUME;
-    VarDecl *p = AllocVarDecl();
-    if (TK.t != TokenType::SYMBOL)
-      VERIFY(0);
-
+    REQUIRE(TokenType::VAR);
+    VarDecl *p = AllocVarDecl(ALLOC_PARAM);
+    NEED_CHECK(TokenType::SYMBOL);
     while (TK.t == TokenType::SYMBOL) {
       Expression *init = nullptr;
       Handle<String> name = Handle<String>::cast(TK.v);
@@ -483,6 +559,7 @@ private:
       if (TK.t == TokenType::ASSIGN) {
         CONSUME;
         init = ParseExpression();
+        CHECK_OK(init);
       }
       p->decl.push({name, init});
       if (TK.t == TokenType::COMMA) {
@@ -491,29 +568,31 @@ private:
       } else if (TK.t == TokenType::SEMI) {
         break;
       } else {
-        VERIFY(0);
+        UNEXPECTED_IF(true);
       }
     }
     REQUIRE(TokenType::SEMI);
     return p;
   }
   BlockStat *ParseBlock() {
-    BlockStat *p = AllocBlockStat();
+    BlockStat *p = AllocBlockStat(ALLOC_PARAM);
     REQUIRE(TokenType::BK_LL);
     while (TK.t != TokenType::BK_LR) {
       Statement *s = TryParseStatement();
-      if (s == nullptr)
+      if (s == nullptr) {
+        if (has_error)return nullptr;
         break;
+      }
+      CHECK_OK(s);
       p->stat.push(s);
     }
     REQUIRE(TokenType::BK_LR);
     return p;
   }
   ExpressionStat *ParseExprStat(bool need_semi = true) {
-    ExpressionStat *p = AllocExpressionStat();
+    ExpressionStat *p = AllocExpressionStat(ALLOC_PARAM);
     p->expr = ParseExpression();
-    if (p->expr == nullptr)
-      return nullptr;
+    CHECK_OK(p->expr);
     if (need_semi)
       REQUIRE(TokenType::SEMI);
     return p;
@@ -530,11 +609,11 @@ private:
     case TokenType::BREAK:
       CONSUME;
       REQUIRE(TokenType::SEMI);
-      return AllocBreakStat();
+      return AllocBreakStat(ALLOC_PARAM);
     case TokenType::CONTINUE:
       CONSUME;
       REQUIRE(TokenType::SEMI);
-      return AllocContinueStat();
+      return AllocContinueStat(ALLOC_PARAM);
     case TokenType::RETURN:
       return ParseReturn();
     case TokenType::FUNC:
@@ -554,42 +633,45 @@ private:
   }
 
   FuncDecl *ParseFunctionDecl() {
-    ASSERT(TK.t == TokenType::FUNC);
-    CONSUME;
-    if (TK.t != TokenType::SYMBOL)
-      VERIFY(0);
-    FuncDecl *p = AllocFuncDecl();
+    REQUIRE(TokenType::FUNC);
+    NEED_CHECK(TokenType::SYMBOL);
+    FuncDecl *p = AllocFuncDecl(ALLOC_PARAM);
     p->name = Handle<String>::cast(TK.v);
     CONSUME;
     REQUIRE(TokenType::BK_SL); // (
     if (TK.t == TokenType::SYMBOL) {
       while (true) {
-        if (TK.t != TokenType::SYMBOL)
-          VERIFY(0);
+        NEED_CHECK(TokenType::SYMBOL)
         p->param.push(Handle<String>::cast(TK.v));
         CONSUME;
         if (TK.t != TokenType::COMMA)
           break;
         CONSUME;
-      };
+      }
+    } else if (TK.t == TokenType::BK_SR) {
+      CONSUME;
+    } else {
+      UNEXPECTED_IF(true);
     }
-    REQUIRE(TokenType::BK_SR); // )
     p->body = ParseBlock();
+    CHECK_OK(p->body);
     return p;
   }
 
 public:
-  Parser() : m_ts(nullptr) {}
+  Parser() : m_ts(nullptr), has_error(false) {}
   FuncDecl *ParseModule(Handle<String> s) {
     m_ts = new TokenStream(s->cstr());
-    FuncDecl *p = AllocFuncDecl();
+    FuncDecl *p = AllocFuncDecl(ALLOC_PARAM);
     p->name = Factory::NewString("#global");
-    p->body = AllocBlockStat();
+    p->body = AllocBlockStat(ALLOC_PARAM);
     while (TK.t != TokenType::END) {
       Statement *s = TryParseStatement();
-      if (s == nullptr && TK.t == TokenType::END)
+      if (s == nullptr) {
+        if (has_error)
+          return nullptr;
         break;
-      VERIFY(s);
+      }
       p->body->stat.push(s);
     }
     delete m_ts;

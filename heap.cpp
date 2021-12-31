@@ -31,12 +31,12 @@ class HeapImpl : public Heap {
   uint64_t m_object_count;
 
 public:
-  void *RawAlloc(size_t size) {
+  static void *RawAlloc(size_t size) {
     void *p = malloc(size);
     DBG_LOG("alloc %llu: %p\n", size, p);
     return p;
   }
-  void RawFree(void *p) { free(p); }
+  static void RawFree(void *p) { free(p); }
 
   //用于为VS的堆分析提供类型参数
   template <class T> __declspec(allocator) T *AllocObject(size_t size) {
@@ -68,26 +68,28 @@ public:
     RawFree(obj);
   }
 
-  HeapImpl *Create() {
+  static HeapImpl *Create() {
     HeapImpl *h = (HeapImpl *)RawAlloc(sizeof(HeapImpl));
     h->m_color = 0;
     h->m_usage = 0;
     h->m_object_count = 0;
 
     h->m_objs.first = h->m_objs.last =
-        (HeapObject *)AllocObject<HeapObject>(sizeof(HeapObject));
+        (HeapObject *)h->AllocObject<HeapObject>(sizeof(HeapObject));
     h->m_objs.last->m_gctag = h->m_color;
     h->m_objs.last->m_nextobj = nullptr;
 
     h->m_roots.first = h->m_roots.last =
-        (HeapObject *)AllocObject<HeapObject>(sizeof(HeapObject));
+        (HeapObject *)h->AllocObject<HeapObject>(sizeof(HeapObject));
     h->m_roots.last->m_gctag = h->m_color;
     h->m_roots.last->m_nextobj = nullptr;
 
-    h->m_null = (SpecialValue *)AllocObject<SpecialValue>(sizeof(SpecialValue));
-    h->m_true = (SpecialValue *)AllocObject<SpecialValue>(sizeof(SpecialValue));
+    h->m_null =
+        (SpecialValue *)h->AllocObject<SpecialValue>(sizeof(SpecialValue));
+    h->m_true =
+        (SpecialValue *)h->AllocObject<SpecialValue>(sizeof(SpecialValue));
     h->m_false =
-        (SpecialValue *)AllocObject<SpecialValue>(sizeof(SpecialValue));
+        (SpecialValue *)h->AllocObject<SpecialValue>(sizeof(SpecialValue));
 
     reinterpret_cast<SpecialValue *>(h->m_null)->m_heapobj_type =
         HeapObjectType::SpecialValue;
@@ -111,7 +113,7 @@ public:
     return h;
   }
 
-  void Destory(Heap *heap) {
+  static void Destory(Heap *heap) {
     // TODO
   }
 
@@ -232,12 +234,12 @@ public:
   }
 };
 #define CALL_HEAP_IMPL(_f, ...) ((HeapImpl *)Global::GetHeap())->_f(__VA_ARGS__)
-void *Heap::RawAlloc(size_t size) { return CALL_HEAP_IMPL(RawAlloc, size); }
-void Heap::RawFree(void *p) { return CALL_HEAP_IMPL(RawFree, p); }
+void *Heap::RawAlloc(size_t size) { return HeapImpl::RawAlloc(size); }
+void Heap::RawFree(void *p) { return HeapImpl::RawFree(p); }
 
-Heap *Heap::Create() { return CALL_HEAP_IMPL(Create); }
+Heap *Heap::Create() { return HeapImpl::Create(); }
 
-void Heap::Destory(Heap *heap) { return CALL_HEAP_IMPL(Destory, heap); }
+void Heap::Destory(Heap *heap) { return HeapImpl::Destory(heap); }
 
 String *Heap::AllocString(const char *cstr, size_t length) {
   return CALL_HEAP_IMPL(AllocString, cstr, length);

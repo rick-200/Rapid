@@ -1,117 +1,16 @@
-fuction '#global'@000002B6A9BCC010:
-  instructions(56 bytes):
-    000: CLOSURE 1
-    003: CALL 0
-    006: STOREL 0
-    009: CLOSURE 0
-    012: CLOSURE 2
-    015: LOADL 0
-    018: CALL 1
-    021: CALL 1
-    024: POP
-    025: CLOSURE 0
-    028: CLOSURE 3
-    031: LOADL 0
-    034: CALL 1
-    037: CALL 1
-    040: POP
-    041: LOADL 1
-    044: LOADK 0
-    047: GET_M
-    048: LOADK 1
-    051: CALL 1
-    054: POP
-    055: RETNULL
-  locals(2):
-    0 n
-    1 console
-  consts(2):
-    0 'print'
-    1 123
-  inner func(4):
-    0 'print'@000002B6A9BCC1C0
-    1 'input'@000002B6A9BCC250
-    2 'fib1'@000002B6A9BCC2E0
-    3 'fib2'@000002B6A9BCC400
-
-fuction 'print'@000002B6A9BCC1C0:
-  instructions(1 bytes):
-    000: RETNULL
-  locals(1):
-    0 x
-  consts(0):
-  inner func(0):
-
-fuction 'input'@000002B6A9BCC250:
+fuction '#global'@000001C594DF45B0:
   instructions(1 bytes):
     000: RETNULL
   locals(0):
   consts(0):
-  inner func(0):
+  inner func(1):
+    0 'a'@000001C594DF4640
 
-fuction 'fib1'@000002B6A9BCC2E0:
-  instructions(38 bytes):
-    000: LOADL 0
-    003: LOADK 0
-    006: LE
-    007: JMP_F 7
-    010: LOADK 1
-    013: RET
-    014: CLOSURE_SELF
-    015: LOADL 0
-    018: LOADK 0
-    021: SUB
-    022: CALL 1
-    025: CLOSURE_SELF
-    026: LOADL 0
-    029: LOADK 1
-    032: SUB
-    033: CALL 1
-    036: ADD
-    037: RET
+fuction 'a'@000001C594DF4640:
+  instructions(1 bytes):
+    000: RETNULL
   locals(1):
-    0 n
-  consts(2):
-    0 2
-    1 1
-  inner func(0):
-
-fuction 'fib2'@000002B6A9BCC400:
-  instructions(66 bytes):
-    000: LOADK 0
-    003: STOREL 1
-    006: LOADK 0
-    009: STOREL 2
-    012: LOADK 1
-    015: STOREL 3
-    018: LOADL 3
-    021: LOADL 0
-    024: LE
-    025: JMP_F 37
-    028: LOADL 1
-    031: STOREL 4
-    034: LOADL 1
-    037: LOADL 2
-    040: ADD
-    041: COPY
-    042: STOREL 1
-    045: LOADL 1
-    048: COPY
-    049: STOREL 2
-    052: LOADK 0
-    055: COPY
-    056: STOREL 3
-    059: JMP -41
-    062: LOADL 1
-    065: RET
-  locals(5):
-    0 n
-    1 a
-    2 b
-    3 i
-    4 c
-  consts(2):
-    0 1
-    1 3
+    0 a
+  consts(0):
   inner func(0):
 

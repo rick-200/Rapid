@@ -1,6 +1,7 @@
 #pragma once
 //#include "object.h"
 #include "preprocessors.h"
+#include "type.h"
 namespace rapid {
 namespace internal {
 class Object;
@@ -16,7 +17,7 @@ class ExternVar;
 class SharedFunctionData;
 class InstructionArray;
 class Exception;
-class Heap {
+class Heap : public StaticClass {
 public:
   static void *RawAlloc(size_t size);
   static void RawFree(void *p);

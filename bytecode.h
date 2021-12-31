@@ -70,6 +70,7 @@ enum class Opcode : uint8_t {
 };
 
 enum class TokenType {
+  NUL,
   END,
   SYMBOL,
   KVAL,

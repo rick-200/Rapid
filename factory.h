@@ -69,9 +69,10 @@ public:
   }
 #define DEF_NEW_STRUCT(_t)                                                     \
   static Handle<_t> New##_t() { CALL_HEAP_ALLOC(_t); }
+
   ITER_STRUCT_DERIVED(DEF_NEW_STRUCT)
 
-}; // namespace internal
+}; 
 
 } // namespace internal
 } // namespace rapid

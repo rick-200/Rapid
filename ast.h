@@ -5,7 +5,7 @@ namespace rapid {
 namespace internal {
 struct ZonePage;
 /*
-提供对编译时小对象的内存快速分配
+提供对编译时简单小对象的内存快速分配
 其内部申请多个大块内存页，并在其上连续进行对象的分配
 不能释放单个对象内存，仅能通过FreeAll()一次性释放所有内存
 注意FreeAll时不会调用对象的析构函数
@@ -100,6 +100,7 @@ enum class AstNodeType {
 };
 struct AstNode {
   AstNodeType type;
+  int row, col;
 };
 struct Statement : public AstNode {};
 struct Expression : public AstNode {};
@@ -187,15 +188,17 @@ inline bool IsAssignableExpr(AstNode *node) {
   return false;
 }
 
-template <class T> inline T *AllocNode();
+template <class T> inline T *AllocNode(int, int);
 #define AllocNode_ITERATOR(T)                                                  \
-  template <> inline T *AllocNode<T>() {                                       \
+  template <> inline T *AllocNode<T>(int row, int col) {                       \
     T *p = (T *)CompilingMemoryZone::Alloc(sizeof(T));                         \
     new (p) T();                                                               \
     p->type = AstNodeType::T;                                                  \
+    p->row = row;                                                              \
+    p->col = col;                                                              \
     return p;                                                                  \
   }                                                                            \
-  inline T *Alloc##T() { return AllocNode<T>(); }
+  inline T *Alloc##T(int row, int col) { return AllocNode<T>(row, col); }
 ITER_ASTNODE(AllocNode_ITERATOR)
 #undef AllocNode_ITERATOR
 class ASTVisitor {
@@ -307,5 +310,6 @@ public:
 //  void Visit(AstNode* node) { node->Accept(this); }
 //
 //};
+
 } // namespace internal
 } // namespace rapid

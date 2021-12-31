@@ -147,6 +147,7 @@
     <ClCompile Include="ast_visualizer.cpp" />
     <ClCompile Include="compiler.cpp" />
     <ClCompile Include="engine.cpp" />
+    <ClCompile Include="executer.cpp" />
     <ClCompile Include="global.cpp" />
     <ClCompile Include="handle.cpp" />
     <ClCompile Include="heap.cpp" />

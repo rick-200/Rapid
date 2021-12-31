@@ -4,6 +4,7 @@ namespace internal {
 class Heap;
 struct GlobalData;
 class HandleContainer;
+class Executer;
 class CompilingMemoryZone;
 class Global {
  public:
@@ -13,6 +14,7 @@ class Global {
   static Heap *GetHeap();
   static HandleContainer *GetHC();
   static CompilingMemoryZone *GetCMZ();
+  static Executer *GetExecuter();
   // static void SetHeap(Heap *h);
 };
 }  // namespace internal

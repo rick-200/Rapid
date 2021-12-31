@@ -171,7 +171,7 @@ public:
   static constexpr Failure *IndexNotFound = FAILURE_VAL(5);
   static constexpr Failure *NoEnoughSpace = FAILURE_VAL(5);
   static constexpr Failure *NotImplemented = FAILURE_VAL(6);
-
+  static constexpr Failure *Expection = FAILURE_VAL(7); //‘À–– ±¥ÌŒÛ
   uint32_t code() { return (uint32_t)(reinterpret_cast<Address>(this) >> 2); }
   DEF_CAST(Failure)
   OBJECT_DEF(Failure);
@@ -757,7 +757,8 @@ public:
 
 // ----Object Implement--------
 #define IS_HEAPOBJECT(_t)                                                      \
-  (IsHeapObject() && HeapObject::cast(this)->m_heapobj_type == HeapObjectType::_t)
+  (IsHeapObject() &&                                                           \
+   HeapObject::cast(this)->m_heapobj_type == HeapObjectType::_t)
 #define IMPL_IS_HEAPOBJ_DERIVED_FINAL(_t)                                      \
   bool Object::Is##_t() { return IS_HEAPOBJECT(_t); }
 ITER_HEAPOBJ_DERIVED_FINAL(IMPL_IS_HEAPOBJ_DERIVED_FINAL)
@@ -767,8 +768,10 @@ bool Object::IsFalse() { return this == Heap::FalseValue(); }
 bool Object::IsBool() { return IsTrue() || IsFalse(); }
 bool Object::IsStruct() {
   return IsHeapObject() &&
-         HeapObject::cast(this)->m_heapobj_type > HeapObjectType::Flag_Struct_Start &&
-         HeapObject::cast(this)->m_heapobj_type < HeapObjectType::Flag_Struct_End;
+         HeapObject::cast(this)->m_heapobj_type >
+             HeapObjectType::Flag_Struct_Start &&
+         HeapObject::cast(this)->m_heapobj_type <
+             HeapObjectType::Flag_Struct_End;
 }
 #undef IMPL_IS_HEAPOBJ_DERIVED_FINAL
 #undef IS_HEAPOBJECT

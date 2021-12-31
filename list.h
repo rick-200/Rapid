@@ -6,31 +6,31 @@
 #include "preprocessors.h"
 namespace rapid {
 namespace internal {
-template <class T>
-class List : public Malloced {
-  T* m_p;
+template <class T> class List : public Malloced {
+  T *m_p;
   size_t m_siz, m_cap;
 
- private:
+private:
   void change_capacity(size_t new_cap) {
-    T* oldp = m_p;
+    T *oldp = m_p;
     m_p = new (std::nothrow) T[new_cap];
     VERIFY(m_p != nullptr);
-    for (size_t i = 0; i < m_siz; i++) new (m_p + i) T(std::move(oldp[i]));
+    for (size_t i = 0; i < m_siz; i++)
+      new (m_p + i) T(std::move(oldp[i]));
     delete[] oldp;
     m_cap = new_cap;
   }
 
- public:
+public:
   List() : m_p(nullptr), m_siz(0), m_cap(0) {}
   ~List() { delete[] m_p; }
-  T* begin() const { return m_p; }
-  T* end() const { return m_p + m_siz; }
+  T *begin() const { return m_p; }
+  T *end() const { return m_p + m_siz; }
   size_t size() const { return m_siz; }
   size_t capacity() const { return m_cap; }
-  T& operator[](size_t pos) { return m_p[pos]; }
-  const T& operator[](size_t pos) const { return m_p[pos]; }
-  void push(const T& v) {
+  T &operator[](size_t pos) { return m_p[pos]; }
+  const T &operator[](size_t pos) const { return m_p[pos]; }
+  void push(const T &v) {
     reserve(m_siz + 1);
     m_p[m_siz++] = v;
   }
@@ -50,31 +50,33 @@ class List : public Malloced {
     m_siz = new_size;
   }
   void reserve(size_t size) {
-    if (size <= m_cap) return;
+    if (size <= m_cap)
+      return;
     change_capacity(std::max(size, m_cap << 1));
   }
   void shrink_to_fit() { change_capacity(m_siz); }
   void clear() { m_siz = 0; }
-  const T& front() { return *m_p; }
-  const T& back() { return m_p[m_siz - 1]; }
+  const T &front() const { return *m_p; }
+  const T &back() const { return m_p[m_siz - 1]; }
+  T &front() { return *m_p; }
+  T &back() { return m_p[m_siz - 1]; }
 };
-template <class T>
-class ListView {
-  T* m_p;
+template <class T> class ListView {
+  T *m_p;
   size_t m_siz;
 
- public:
-  ListView(const List<T>& list) : m_p(list.begin()), m_siz(list.length()) {}
-  ListView(T* p, size_t siz) : m_p(p), m_siz(siz) {}
-  T& operator[](size_t pos) {
+public:
+  ListView(const List<T> &list) : m_p(list.begin()), m_siz(list.length()) {}
+  ListView(T *p, size_t siz) : m_p(p), m_siz(siz) {}
+  T &operator[](size_t pos) {
     ASSERT(pos < m_siz);
     return m_p[pos];
   }
-  const T& operator[](size_t pos) const {
+  const T &operator[](size_t pos) const {
     ASSERT(pos < m_siz);
     return m_p[pos];
   }
 };
 
-}  // namespace internal
-}  // namespace rapid
+} // namespace internal
+} // namespace rapid
