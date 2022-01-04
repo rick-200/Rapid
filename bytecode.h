@@ -16,6 +16,8 @@ enum class Opcode : uint8_t {
   STOREL,
   LOADK,
   LOADE,
+  LOAD_THIS,
+  LOAD_PARAMS,
   STOREE,
   COPY,  //复制栈顶并push到栈上
   POP,
@@ -51,13 +53,15 @@ enum class Opcode : uint8_t {
   SET_I,
 
   JMP,
-  JMP_T,
-  JMP_F,
+  JMP_T,  //消耗栈顶元素
+  JMP_F,  //消耗栈顶元素
 
   NEG,
   ACT,
 
-  CALL,
+  CALL,       // 3 -> func p1 p2 p3
+  THIS_CALL,  // 3 -> obj func_name p1 p2 p3
+              //
   RET,
   RETNULL,
   CLOSURE,
@@ -88,6 +92,8 @@ enum class TokenType {
   CONST,
   TRY,
   CATCH,
+  THIS,
+  PARAMS,
 
   BK_SL,
   BK_SR,
@@ -151,6 +157,8 @@ enum class TokenType {
   V(TokenType::EXPORT, "export")     \
   V(TokenType::CONST, "const")       \
   V(TokenType::TRY, "try")           \
+  V(TokenType::THIS, "this")         \
+  V(TokenType::PARAMS, "params")     \
   V(TokenType::CATCH, "catch")
 
 #define TT_ITER_CONTROL(V) \

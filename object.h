@@ -4,7 +4,7 @@
 
 #pragma once
 #pragma warning(push)
-#pragma warning(disable : 4200) // 0大小数组
+#pragma warning(disable : 4200)  // 0大小数组
 
 #include <utility>
 
@@ -33,51 +33,53 @@ namespace internal {
       - VarData
       - ExternVarData
 */
-#define ITER_HEAPOBJ_DERIVED_FINAL(V)                                          \
-  V(SpecialValue)                                                              \
-  V(String)                                                                    \
-  V(FixedArray)                                                                \
-  V(FixedTable)                                                                \
-  V(Array)                                                                     \
-  V(Table)                                                                     \
-  V(FixedByteArray)                                                            \
-  V(ByteArray)                                                                 \
-  V(InstructionArray)                                                          \
-  V(Exception)                                                                 \
-  V(FunctionData)                                                              \
-  V(VarData)                                                                   \
-  V(ExternVarData)                                                             \
-  V(ExternVar)                                                                 \
+#define ITER_HEAPOBJ_DERIVED_FINAL(V) \
+  V(SpecialValue)                     \
+  V(String)                           \
+  V(FixedArray)                       \
+  V(FixedTable)                       \
+  V(Array)                            \
+  V(Table)                            \
+  V(FixedByteArray)                   \
+  V(ByteArray)                        \
+  V(InstructionArray)                 \
+  V(Exception)                        \
+  V(NativeFunction)                   \
+  V(FunctionData)                     \
+  V(VarData)                          \
+  V(ExternVarData)                    \
+  V(ExternVar)                        \
   V(SharedFunctionData)
 
-#define ITER_STRUCT_DERIVED(V)                                                 \
-  V(VarData) V(ExternVarData) V(ExternVar) V(SharedFunctionData)
+#define ITER_STRUCT_DERIVED(V) \
+  V(VarData)                   \
+  V(ExternVarData) V(ExternVar) V(SharedFunctionData) V(FunctionData)
 
 typedef intptr_t Address;
 
-#define TEST_PTR_TAG(_p, _tag)                                                 \
+#define TEST_PTR_TAG(_p, _tag) \
   ((reinterpret_cast<Address>(_p) & 0b11) == (_tag))
 #define TAG_INT 0b11
 #define TAG_FLOAT 0b01
 #define TAG_FAILURE 0b10
 #define TAG_HEAPOBJ 0b00
-#define DEF_R_ACCESSOR(_member)                                                \
+#define DEF_R_ACCESSOR(_member) \
   auto _member() { return this->m_##_member; }
-#define DEF_CAST(_t)                                                           \
-  static inline _t *cast(Object *obj) {                                        \
-    ASSERT(obj->Is##_t());                                                     \
-    return reinterpret_cast<_t *>(obj);                                        \
+#define DEF_CAST(_t)                    \
+  static inline _t *cast(Object *obj) { \
+    ASSERT(obj->Is##_t());              \
+    return reinterpret_cast<_t *>(obj); \
   }
 
 //注意必须在定义的最后应用OBJECT_DEF(type)
 //否则Interface中找不到当前类的函数
-#define OBJECT_DEF(_t)                                                         \
-  _t() = delete;                                                               \
-  _t(_t &) = delete;                                                           \
-  friend class Heap;                                                           \
-  friend class HeapImpl;                                                       \
-  friend class GCTracer;                                                       \
-  static constexpr ObjectInterface Interface = {                               \
+#define OBJECT_DEF(_t)                           \
+  _t() = delete;                                 \
+  _t(_t &) = delete;                             \
+  friend class Heap;                             \
+  friend class HeapImpl;                         \
+  friend class GCTracer;                         \
+  static constexpr ObjectInterface Interface = { \
       get_member, set_member, get_index, set_index, trace_ref};
 
 enum class HeapObjectType {
@@ -89,22 +91,23 @@ enum class HeapObjectType {
   Array,
   ByteArray,
   Table,
-  FunctionData,
   SpecialValue,
   InstructionArray,
   Exception,
+  NativeFunction,
   Flag_Struct_Start,
   Struct,
   VarData,
   ExternVarData,
   ExternVar,
   SharedFunctionData,
+  FunctionData,
   Flag_Struct_End,
 };
 
 //所有对象的根对象
 class Object {
-public:
+ public:
   inline bool IsInteger() { return TEST_PTR_TAG(this, TAG_INT); }
   inline bool IsFloat() { return TEST_PTR_TAG(this, TAG_FLOAT); }
   inline bool IsFailure() { return TEST_PTR_TAG(this, TAG_FAILURE); }
@@ -119,19 +122,19 @@ public:
   DEF_ISXXX(Null);
   DEF_ISXXX(Struct);
 
-protected:
+ protected:
   static Object *get_member(Object *obj, String *name);
   static Object *set_member(Object *obj, String *name, Object *val);
   static Object *get_index(Object *obj, Object *idx);
   static Object *set_index(Object *obj, Object *idx, Object *val);
   static void trace_ref(Object *obj, GCTracer *gct);
 
-public:
+ public:
   OBJECT_DEF(Object);
 };
 // 62位整数，保存于指针内
 class Integer : public Object {
-public:
+ public:
   int64_t value() { return reinterpret_cast<int64_t>(this) >> 2; }
   static constexpr int64_t max_value = 0X1FFF'FFFF'FFFF'FFFFLL;
   static constexpr int64_t min_value = 0XE000'0000'0000'0000LL;
@@ -145,7 +148,7 @@ public:
 // 62位浮点数，由double牺牲两位尾数而来
 //保存于指针内
 class Float : public Object {
-public:
+ public:
   double value() {
     uint64_t v = reinterpret_cast<Address>(this) ^ TAG_FLOAT;
     return *reinterpret_cast<double *>(&v);
@@ -160,8 +163,8 @@ public:
 };
 //表示失败的操作，内含一个预定义的错误代码
 class Failure : public Object {
-public:
-#define FAILURE_VAL(code)                                                      \
+ public:
+#define FAILURE_VAL(code) \
   reinterpret_cast<Failure *>(((code) << 2) | TAG_FAILURE)
   static constexpr Failure *Exception = FAILURE_VAL(1);
   static constexpr Failure *OutOfMemory = FAILURE_VAL(2);
@@ -171,7 +174,7 @@ public:
   static constexpr Failure *IndexNotFound = FAILURE_VAL(5);
   static constexpr Failure *NoEnoughSpace = FAILURE_VAL(5);
   static constexpr Failure *NotImplemented = FAILURE_VAL(6);
-  static constexpr Failure *Expection = FAILURE_VAL(7); //运行时错误
+  static constexpr Failure *Expection = FAILURE_VAL(7);  //运行时错误
   uint32_t code() { return (uint32_t)(reinterpret_cast<Address>(this) >> 2); }
   DEF_CAST(Failure)
   OBJECT_DEF(Failure);
@@ -182,17 +185,17 @@ class FunctionData;
 
 //所有分配在堆上的对象的基类
 class HeapObject : public Object {
-private:
+ private:
   friend class Object;
   HeapObjectType m_heapobj_type;
   uint8_t m_gctag;
   HeapObject *m_nextobj;
 
-protected:
+ protected:
   const ObjectInterface *m_interface;
 
-public:
-public:
+ public:
+ public:
   DEF_CAST(HeapObject)
   OBJECT_DEF(HeapObject);
 };
@@ -202,13 +205,40 @@ class SpecialValue : public HeapObject {
   // 0:null 1:true 2:false
   uint8_t m_val;
 
-private:
+ private:
   static constexpr uint8_t NullVal = 0;
   static constexpr uint8_t TrueVal = 1;
   static constexpr uint8_t FalseVal = 2;
 
-public:
+ public:
   OBJECT_DEF(SpecialValue);
+};
+
+//包裹一个本地函数指针
+class NativeFunction : public HeapObject {
+ public:
+  NativeFunctionPtr func;
+  void *data;
+  NativeFuncObjGCCallback gc_callback;
+
+ public:
+  Object *call(const Parameters &params) { return func(data, params); }
+  void on_gc() { gc_callback(func, data); }
+
+ public:
+  OBJECT_DEF(NativeFunction);
+  DEF_CAST(NativeFunction);
+};
+
+//包裹一个本地对象
+// TODO
+class NativeObject : public HeapObject {
+  void *m_p;
+  void *m_data;
+  void *m_gc_callback;
+  const ObjectInterface *custom_interface;
+
+ public:
 };
 
 //字符串对象
@@ -217,30 +247,27 @@ class String : public HeapObject {
   uint64_t m_hash;
   char m_data[];
 
-public:
+ public:
   char *cstr() { return m_data; }
   size_t length() { return m_length; }
   uint64_t hash() { return m_hash; }
 
   static bool Equal(String *s1, String *s2) {
-    if (s1 == s2)
-      return true;
-    if (s1->m_hash != s2->m_hash || s1->m_length != s2->m_length)
-      return false;
+    if (s1 == s2) return true;
+    if (s1->m_hash != s2->m_hash || s1->m_length != s2->m_length) return false;
     size_t len = s1->m_length;
     for (size_t i = 0; i < len; i++) {
-      if (s1->m_data[i] != s2->m_data[i])
-        return false;
+      if (s1->m_data[i] != s2->m_data[i]) return false;
     }
     return true;
   }
 
-private:
+ private:
   static Object *get_member(Object *obj, String *name) {
     return Failure::Exception;
   }
 
-public:
+ public:
   OBJECT_DEF(String);
   DEF_CAST(String);
 };
@@ -250,7 +277,7 @@ class FixedArray : public HeapObject {
   size_t m_length;
   Object *m_data[];
 
-public:
+ public:
   size_t length() { return m_length; }
   Object *get(size_t pos) {
     ASSERT(pos < m_length);
@@ -262,8 +289,10 @@ public:
     m_data[pos] = val;
     return old;
   }
+  Object **begin() { return m_data; }
+  Object **end() { return m_data + m_length; }
 
-public:
+ public:
   static void trace_ref(Object *obj, GCTracer *gct) {
     FixedArray *_this = FixedArray::cast(obj);
     for (size_t i = 0; i < _this->m_length; i++) {
@@ -271,7 +300,7 @@ public:
     }
   }
 
-public:
+ public:
   OBJECT_DEF(FixedArray)
   DEF_CAST(FixedArray)
 };
@@ -284,17 +313,16 @@ class FixedTable : public HeapObject {
     Node *next;
   };
 
-private:
+ private:
   size_t m_size;
   size_t m_used;
   Node *m_pfree;
   Node m_data[];
 
-private:
+ private:
   bool has_free() {
     Node *pend = m_data + m_size;
-    while (m_pfree < pend && m_pfree->key != nullptr)
-      ++m_pfree;
+    while (m_pfree < pend && m_pfree->key != nullptr) ++m_pfree;
     return m_pfree < pend;
   }
   //调用前必须先调用has_free
@@ -306,12 +334,10 @@ private:
   size_t mainpos(String *key) { return key->hash() % m_size; }
   Node *find_node(String *key) {
     Node *p = m_data + mainpos(key);
-    if (p->key == nullptr)
-      return nullptr;
+    if (p->key == nullptr) return nullptr;
     while (p != nullptr) {
       ASSERT(mainpos(p->key) == mainpos(key));
-      if (String::Equal(p->key, key))
-        return p;
+      if (String::Equal(p->key, key)) return p;
       p = p->next;
     }
     return nullptr;
@@ -323,27 +349,23 @@ private:
       ++m_used;
       return p;
     }
-    if (mainpos(p->key) == mainpos(key)) { //无哈希冲突
+    if (mainpos(p->key) == mainpos(key)) {  //无哈希冲突
       while (p->next != nullptr) {
         ASSERT(mainpos(p->key) == mainpos(key));
-        if (String::Equal(p->key, key))
-          return p;
+        if (String::Equal(p->key, key)) return p;
         p = p->next;
       }
-      if (!has_free())
-        return nullptr;
+      if (!has_free()) return nullptr;
       p->next = new_node();
       p->next->key = key;
       return p->next;
     }
     //存在哈希冲突
-    if (!has_free())
-      return nullptr; //一定需要新建节点
+    if (!has_free()) return nullptr;  //一定需要新建节点
     Node *trans =
-        new_node(); //准备将mainpos(key)节点移动到新节点，以保证一条链上的mainpos一致
+        new_node();  //准备将mainpos(key)节点移动到新节点，以保证一条链上的mainpos一致
     Node *ppre = m_data + mainpos(p->key);
-    while (ppre->next != p)
-      ppre = ppre->next;
+    while (ppre->next != p) ppre = ppre->next;
     *trans = *p;
     ppre->next = trans;
     p->key = key;
@@ -357,8 +379,7 @@ private:
   //          若删除的节点正好位于mainpos且next==nullptr且pfree指向此节点之后，则插入此mainpos时会被重新利用
   Object *remove_node(String *key) {
     Node *p = find_node(key);
-    if (p == nullptr)
-      return nullptr;
+    if (p == nullptr) return nullptr;
     Object *ret = p->val;
     while (p->next != nullptr) {
       Node *pnxt = p->next;
@@ -373,23 +394,20 @@ private:
     return ret;
   }
 
-public:
+ public:
   Object *get(String *key) {
     Node *p = find_node(key);
-    if (p == nullptr)
-      return Failure::IndexNotFound;
+    if (p == nullptr) return Failure::IndexNotFound;
     return p->val;
   }
   Object *set(String *key, Object *val, bool allow_new = true) {
     Node *p;
     if (allow_new) {
       p = find_or_create_node(key);
-      if (p == nullptr)
-        return Failure::NoEnoughSpace;
+      if (p == nullptr) return Failure::NoEnoughSpace;
     } else {
       p = find_node(key);
-      if (p == nullptr)
-        return Failure::IndexNotFound;
+      if (p == nullptr) return Failure::IndexNotFound;
     }
     Object *old = p->val;
     p->val = val;
@@ -398,8 +416,7 @@ public:
   //注意remove()删除的节点不一定会被重新利用
   Object *remove(String *key) {
     Object *obj = remove_node(key);
-    if (obj == nullptr)
-      return Failure::IndexNotFound;
+    if (obj == nullptr) return Failure::IndexNotFound;
     return obj;
   }
   bool exists(String *key) { return find_node(key) != nullptr; }
@@ -412,12 +429,11 @@ public:
     ASSERT(m_used <= other->m_size);
     ASSERT(other->m_used == 0);
     for (Node *p = m_data; p < m_data + m_size; p++) {
-      if (p->key != nullptr)
-        other->find_or_create_node(p->key)->val = p->val;
+      if (p->key != nullptr) other->find_or_create_node(p->key)->val = p->val;
     }
   }
 
-public:
+ public:
   static void trace_ref(Object *obj, GCTracer *gct) {
     FixedTable *_this = FixedTable::cast(obj);
     for (size_t i = 0; i < _this->m_size; i++) {
@@ -428,7 +444,7 @@ public:
     }
   }
 
-public:
+ public:
   OBJECT_DEF(FixedTable)
   DEF_CAST(FixedTable)
 };
@@ -437,11 +453,11 @@ class FixedByteArray : public HeapObject {
   size_t m_length;
   byte m_data[];
 
-public:
+ public:
   size_t length() { return m_length; }
   byte *data() { return m_data; }
 
-public:
+ public:
   OBJECT_DEF(FixedByteArray)
   DEF_CAST(FixedByteArray)
 };
@@ -452,20 +468,19 @@ class ByteArray : public HeapObject {
   size_t m_length;
   FixedByteArray *m_array;
 
-private:
+ private:
   void change_capacity(size_t new_cap) {}
   static inline size_t apply_alignment(size_t size, size_t alignment) {
     return size - size % alignment + alignment;
   }
 
-public:
+ public:
   size_t length() { return m_length; }
   size_t capacity() { return m_array->length(); }
   byte *data() { return m_array->data(); }
   void reserve(size_t new_cap, size_t alignment) {
     ASSERT(new_cap % alignment == 0);
-    if (new_cap <= capacity())
-      return;
+    if (new_cap <= capacity()) return;
     change_capacity(
         std::max(new_cap, apply_alignment((capacity() << 1) | 1, alignment)));
   }
@@ -475,25 +490,27 @@ public:
   }
   void shrink_to_fit() { change_capacity(m_length); }
 
-public:
+ public:
   OBJECT_DEF(ByteArray)
   DEF_CAST(ByteArray)
 };
 
-template <class T> class FixedByteArrayView {
+template <class T>
+class FixedByteArrayView {
   FixedByteArray *m_array;
 
-public:
+ public:
 };
 
 //提供操作ByteArray的接口
 //将ByteArray当作类似std::vector<T>使用
-template <class T> class ByteArrayView {
+template <class T>
+class ByteArrayView {
   ByteArray *m_array;
-#define BYTE_ARRAY_VIEW_CHECK                                                  \
-  ASSERT(m_array->length() % sizeof(T) == 0);                                  \
+#define BYTE_ARRAY_VIEW_CHECK                 \
+  ASSERT(m_array->length() % sizeof(T) == 0); \
   ASSERT(m_array->capacity() % sizeof(T) == 0)
-private:
+ private:
   void inner_reserve(size_t size) {
     m_array->reserve(size * sizeof(T), sizeof(T));
   }
@@ -501,7 +518,7 @@ private:
     m_array->resize(size * sizeof(T), sizeof(T));
   }
 
-public:
+ public:
   T *begin() {
     BYTE_ARRAY_VIEW_CHECK;
     return reinterpret_cast<T *>(m_array->data());
@@ -532,8 +549,7 @@ public:
   void resize(size_t size, const T &val = T{}) {
     size_t old_end = length();
     inner_resize(size);
-    for (size_t i = old_end; i < length(); i++)
-      set(i, val);
+    for (size_t i = old_end; i < length(); i++) set(i, val);
   }
   size_t length() {
     BYTE_ARRAY_VIEW_CHECK;
@@ -545,33 +561,30 @@ class Array : public HeapObject {
   FixedArray *m_array;
   size_t m_length;
 
-private:
+ private:
   void change_capacity(size_t new_cap);
   void try_shrink() {
-    if (m_array->length() > (m_length << 2))
-      change_capacity(m_length << 1);
+    if (m_array->length() > (m_length << 2)) change_capacity(m_length << 1);
   }
 
-public:
+ public:
   size_t length() { return m_length; }
   size_t capacity() { return m_array->length(); }
   Object *get(size_t pos) {
-    if (pos >= m_length)
-      return Failure::IndexNotFound;
+    if (pos >= m_length) return Failure::IndexNotFound;
     return m_array->get(pos);
   }
   Object *set(size_t pos, Object *val) {
-    if (pos >= m_length)
-      return Failure::IndexNotFound;
+    if (pos >= m_length) return Failure::IndexNotFound;
     return m_array->set(pos, val);
   }
   void push(Object *val) {
     if (m_length == m_array->length())
-      change_capacity((m_array->length() << 1) | 1); //每次增加一倍，至少增加1
+      change_capacity((m_array->length() << 1) | 1);  //每次增加一倍，至少增加1
     m_array->set(m_length++, val);
   }
   void reserve(size_t new_cap) {
-    if (new_cap > m_array->length()) //至少增加一倍
+    if (new_cap > m_array->length())  //至少增加一倍
       change_capacity(std::max(new_cap, (m_array->length() << 1) | 1));
   }
   void pop() {
@@ -583,8 +596,7 @@ public:
     if (new_len > m_length) {
       reserve(new_len);
       Object *null_v = Heap::NullValue();
-      for (size_t i = m_length; i < new_len; i++)
-        m_array->set(i, null_v);
+      for (size_t i = m_length; i < new_len; i++) m_array->set(i, null_v);
       m_length = new_len;
     } else if (new_len < m_length) {
       m_length = new_len;
@@ -592,7 +604,7 @@ public:
     }
   }
 
-private:
+ private:
   static Object *get_index(Object *obj, Object *idx) {
     // TODO
     return Failure::Exception;
@@ -602,7 +614,7 @@ private:
     FixedArray::trace_ref(_this->m_array, gct);
   }
 
-public:
+ public:
   OBJECT_DEF(Array)
   DEF_CAST(Array)
 };
@@ -611,18 +623,16 @@ public:
 class Table : public HeapObject {
   FixedTable *m_table;
 
-private:
+ private:
   void rehash_expand();
   void try_rehash_shrink();
 
-public:
+ public:
   Object *get(String *key) { return m_table->get(key); }
   Object *set(String *key, Object *val, bool allow_new = true) {
-    if (!allow_new)
-      return m_table->set(key, val, false);
+    if (!allow_new) return m_table->set(key, val, false);
 
-    if (m_table->used() * 2 > m_table->size())
-      rehash_expand();
+    if (m_table->used() * 2 > m_table->size()) rehash_expand();
     Object *x = m_table->set(key, val, true);
     ASSERT(!x->IsFailure());
     return x;
@@ -638,7 +648,7 @@ public:
     FixedTable::trace_ref(_this->m_table, gct);
   }
 
-public:
+ public:
   OBJECT_DEF(Table)
   DEF_CAST(Table)
 };
@@ -646,7 +656,7 @@ class InstructionArray : public HeapObject {
   size_t m_length;
   Cmd m_data[];
 
-public:
+ public:
   OBJECT_DEF(InstructionArray)
   DEF_CAST(InstructionArray)
   size_t length() { return m_length; }
@@ -658,7 +668,7 @@ class Exception : public HeapObject {
   String *m_info;
   Object *m_data;
 
-private:
+ private:
   static void trace_ref(Object *obj, GCTracer *gct) {
     Exception *_this = Exception::cast(obj);
     gct->Trace(_this->m_type);
@@ -666,7 +676,7 @@ private:
     gct->Trace(_this->m_data);
   }
 
-public:
+ public:
   OBJECT_DEF(Exception)
   DEF_CAST(Exception)
   DEF_R_ACCESSOR(type);
@@ -676,60 +686,60 @@ public:
 
 //包含简单数据的对象的基类
 class Struct : public HeapObject {
-public:
+ public:
   OBJECT_DEF(Struct)
   DEF_CAST(Struct)
 };
 
 //用于实现Struct派生类的trace_ref
-#define DECL_TRACEREF(_t, ...)                                                 \
-  static void trace_ref(Object *obj, GCTracer *gct) {                          \
-    _t *_this = _t::cast(obj);                                                 \
-    gct->TraceAll(__VA_ARGS__);                                                \
+#define DECL_TRACEREF(_t, ...)                        \
+  static void trace_ref(Object *obj, GCTracer *gct) { \
+    _t *_this = _t::cast(obj);                        \
+    gct->TraceAll(__VA_ARGS__);                       \
   }
 #define _M(_m) _this->_m
 
 class VarData : public Struct {
-public:
+ public:
   String *name;
 
-private:
+ private:
   DECL_TRACEREF(VarData, _M(name));
 
-public:
+ public:
   OBJECT_DEF(VarData)
   DEF_CAST(VarData)
 };
 class ExternVarData : public Struct {
-public:
+ public:
   String *name;
   bool in_stack;
   uint8_t pos;
 
-private:
+ private:
   DECL_TRACEREF(ExternVarData, _M(name));
 
-public:
+ public:
   OBJECT_DEF(ExternVarData)
   DEF_CAST(ExternVarData)
 };
 
 class ExternVar : public Struct {
-public:
+ public:
   Object *value;
   bool in_stack;
   uint8_t pos;
 
-private:
+ private:
   DECL_TRACEREF(ExternVar, _M(value));
 
-public:
+ public:
   OBJECT_DEF(ExternVar)
   DEF_CAST(ExternVar)
 };
 
 class SharedFunctionData : public Struct {
-public:
+ public:
   String *name;
   InstructionArray *instructions;
   FixedArray *kpool;
@@ -737,29 +747,35 @@ public:
   FixedArray *vars;
   FixedArray *extvars;
   size_t max_stack;
-
-private:
+  size_t param_cnt;
+ private:
   DECL_TRACEREF(SharedFunctionData, _M(name), _M(instructions), _M(kpool),
                 _M(inner_func), _M(vars), _M(extvars));
 
-public:
+ public:
   OBJECT_DEF(SharedFunctionData)
   DEF_CAST(SharedFunctionData)
 };
+class FunctionData : public Struct {
+ public:
+  SharedFunctionData *shared_data;
+  FixedArray *extvars;
+
+ private:
+  DECL_TRACEREF(FunctionData, _M(shared_data), _M(extvars));
+
+ public:
+  OBJECT_DEF(FunctionData)
+  DEF_CAST(FunctionData)
+};
 #undef DECL_TRACEREF
 #undef _M
-class FunctionData : public HeapObject {
-  SharedFunctionData *shared_data;
-  FixedArray *m_extvars;
-
-public:
-};
 
 // ----Object Implement--------
-#define IS_HEAPOBJECT(_t)                                                      \
-  (IsHeapObject() &&                                                           \
+#define IS_HEAPOBJECT(_t) \
+  (IsHeapObject() &&      \
    HeapObject::cast(this)->m_heapobj_type == HeapObjectType::_t)
-#define IMPL_IS_HEAPOBJ_DERIVED_FINAL(_t)                                      \
+#define IMPL_IS_HEAPOBJ_DERIVED_FINAL(_t) \
   bool Object::Is##_t() { return IS_HEAPOBJECT(_t); }
 ITER_HEAPOBJ_DERIVED_FINAL(IMPL_IS_HEAPOBJ_DERIVED_FINAL)
 bool Object::IsNull() { return this == Heap::NullValue(); }
@@ -864,6 +880,6 @@ bool Object::IsStruct() {
 //  OBJECT_DEF(SpecialValue);
 //};
 
-} // namespace internal
-} // namespace rapid
+}  // namespace internal
+}  // namespace rapid
 #pragma warning(pop)

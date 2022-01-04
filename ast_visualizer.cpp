@@ -2,6 +2,5 @@
 namespace rapid {
 namespace internal {
 
-
 }  // namespace internal
 }  // namespace rapid

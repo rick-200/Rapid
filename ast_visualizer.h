@@ -9,7 +9,7 @@ class VisualizerVisitor : public ASTVisitor {
   int m_cnt;
   int ret;
 
-public:
+ public:
   VisualizerVisitor(StringBuilder &sb) : m_sb(sb), m_cnt(0), ret(0) {}
   // Í¨¹ý ASTVisitor ¼Ì³Ð
   void DefNode(Handle<Object> v) {
@@ -70,7 +70,7 @@ public:
     }
     ret = if_;
   }
-  virtual void VisitLoopStat(LoopStat *node) { // TODO
+  virtual void VisitLoopStat(LoopStat *node) {  // TODO
     if (node->loop_type == LoopStat::Type::FOR) {
       DefNode("for");
     } else if (node->loop_type == LoopStat::Type::WHILE) {
@@ -166,15 +166,15 @@ public:
     Connect(idxop, index);
     ret = idxop;
   }
-#define VisitBinaryExpr_ITER(t, s)                                             \
-  case t:                                                                      \
-    DefNode(s);                                                                \
+#define VisitBinaryExpr_ITER(t, s) \
+  case t:                          \
+    DefNode(s);                    \
     break;
-#define SWITCH_DEF_NODE                                                        \
-  switch (node->opt) {                                                         \
-    TT_ITER_OPERATOR(VisitBinaryExpr_ITER);                                    \
-  default:                                                                     \
-    ASSERT(0);                                                                 \
+#define SWITCH_DEF_NODE                     \
+  switch (node->opt) {                      \
+    TT_ITER_OPERATOR(VisitBinaryExpr_ITER); \
+    default:                                \
+      ASSERT(0);                            \
   }
   virtual void VisitUnaryExpr(UnaryExpr *node) {
     SWITCH_DEF_NODE;
@@ -221,6 +221,12 @@ public:
     }
     ret = call;
   }
+  virtual void VisitThisExpr(rapid::internal::ThisExpr *node) {
+    DefNode("this");
+  }
+  virtual void VisitParamsExpr(rapid::internal::ParamsExpr *node) {
+    DefNode("params");
+  }
 };
 
 inline Handle<String> VisualizeAST(AstNode *node) {
@@ -230,20 +236,20 @@ inline Handle<String> VisualizeAST(AstNode *node) {
   return sb.ToString();
 }
 
-#define CASE_0(_op)                                                            \
-  case Opcode::_op:                                                            \
-    sb.AppendString(#_op);                                                     \
-    ++pc;                                                                      \
+#define CASE_0(_op)        \
+  case Opcode::_op:        \
+    sb.AppendString(#_op); \
+    ++pc;                  \
     break;
-#define CASE_u16(_op)                                                          \
-  case Opcode::_op:                                                            \
-    sb.AppendString(#_op " ").AppendInt(*(uint16_t *)(pc + 1));                \
-    pc += 3;                                                                   \
+#define CASE_u16(_op)                                           \
+  case Opcode::_op:                                             \
+    sb.AppendString(#_op " ").AppendInt(*(uint16_t *)(pc + 1)); \
+    pc += 3;                                                    \
     break;
-#define CASE_s16(_op)                                                          \
-  case Opcode::_op:                                                            \
-    sb.AppendString(#_op " ").AppendInt(*(int16_t *)(pc + 1));                 \
-    pc += 3;                                                                   \
+#define CASE_s16(_op)                                          \
+  case Opcode::_op:                                            \
+    sb.AppendString(#_op " ").AppendInt(*(int16_t *)(pc + 1)); \
+    pc += 3;                                                   \
     break;
 inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
   StringBuilder sb;
@@ -259,6 +265,8 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
       CASE_u16(LOADK);
       CASE_u16(LOADE);
       CASE_u16(STOREE);
+      CASE_0(LOAD_THIS);
+      CASE_0(LOAD_PARAMS);
       CASE_0(COPY);
       CASE_0(ADD);
       CASE_0(SUB);
@@ -297,8 +305,8 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
       CASE_u16(CLOSURE);
       CASE_0(CLOSURE_SELF);
 
-    default:
-      ASSERT(0);
+      default:
+        ASSERT(0);
     }
     sb.AppendString("\n");
   }
@@ -327,5 +335,5 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
   }
   return sb.ToString();
 }
-} // namespace internal
-} // namespace rapid
+}  // namespace internal
+}  // namespace rapid

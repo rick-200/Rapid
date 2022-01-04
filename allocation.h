@@ -4,10 +4,10 @@ namespace internal {
 
 class Malloced {
  public:
-  static void* operator new(size_t size) { return New(size); }
-  static void operator delete(void* p) { Delete(p); }
-  static void* New(size_t size);
-  static void Delete(void* p);
+  // static void* operator new(size_t size) { return New(size); }
+  // static void operator delete(void* p) { Free(p); }
+  static void *Alloc(size_t size);
+  static void Free(void *p);
 };
 
 }  // namespace internal

@@ -5,11 +5,11 @@
 #include "preprocessors.h"
 namespace rapid {
 namespace internal {
-void* Malloced::New(size_t size) {
+void* Malloced::Alloc(size_t size) {
   void* p = malloc(size);
   VERIFY(p != nullptr);
   return p;
 }
-void Malloced::Delete(void* p) { free(p); }
+void Malloced::Free(void* p) { free(p); }
 }  // namespace internal
 }  // namespace rapid

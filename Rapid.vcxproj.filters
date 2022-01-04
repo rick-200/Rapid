@@ -113,6 +113,9 @@
     <ClInclude Include="stringbuilder.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="config.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="native_debug.natvis" />

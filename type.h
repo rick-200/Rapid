@@ -4,9 +4,8 @@ namespace rapid {
 typedef uint8_t byte;
 typedef uint8_t Cmd;
 class StaticClass {
-public:
+ public:
   StaticClass() = delete;
-  ~StaticClass() = delete;
   StaticClass(const StaticClass &) = delete;
   StaticClass(StaticClass &&) = delete;
   StaticClass &operator=(const StaticClass &) = delete;
@@ -19,8 +18,9 @@ class Parameters;
 class String;
 class Object;
 class GCTracer;
+typedef Object *(*NativeFunctionPtr)(void *data, const Parameters &params);
+typedef void (*NativeFuncObjGCCallback)(NativeFunctionPtr ptr, void *data);
 
-typedef Object *(*CFunctionPtr)(Parameters *);
 typedef Object *(*GetMember)(Object *obj, String *name);
 typedef Object *(*SetMember)(Object *obj, String *name, Object *val);
 typedef Object *(*GetIndex)(Object *obj, Object *index);
@@ -35,5 +35,5 @@ struct ObjectInterface {
   TraceRef trace_ref;
 };
 
-} // namespace internal
-} // namespace rapid
+}  // namespace internal
+}  // namespace rapid

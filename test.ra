@@ -1,1 +1,3 @@
-var a = func a(var){};
+var a =1,b=1,c;
+c=a+b;
+return c;

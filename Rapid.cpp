@@ -16,7 +16,7 @@ using namespace internal;
 class A {
   int x;
 
-public:
+ public:
   int y;
   auto acc_x() {}
 };
@@ -38,20 +38,20 @@ void print_object(Object *obj) {
 void print_token(const Token &t) {
   printf("[%d,%d] ", t.row, t.col);
   switch (t.t) {
-#define PRINT_ITERATOR(_t, _s)                                                 \
-  case _t:                                                                     \
-    std::cout << (_s);                                                         \
+#define PRINT_ITERATOR(_t, _s) \
+  case _t:                     \
+    std::cout << (_s);         \
     break;
     TT_ITER_CONTROL(PRINT_ITERATOR);
     TT_ITER_KEWWORD(PRINT_ITERATOR);
     TT_ITER_OPERATOR(PRINT_ITERATOR);
-  case TokenType::KVAL:
-    printf("k ");
-    print_object(t.v.ptr());
-    break;
-  case TokenType::SYMBOL:
-    printf("sym %s", String::cast(t.v.ptr())->cstr());
-    break;
+    case TokenType::KVAL:
+      printf("k ");
+      print_object(t.v.ptr());
+      break;
+    case TokenType::SYMBOL:
+      printf("sym %s", String::cast(t.v.ptr())->cstr());
+      break;
   }
 }
 char buff[1024 * 1024 * 128];
@@ -62,8 +62,7 @@ void do_tokenlize(int64_t *ti, int64_t *cnt) {
   HandleScope hs;
   TokenStream ts(buff);
   while (true) {
-    if (ts.peek().t == TokenType::END)
-      break;
+    if (ts.peek().t == TokenType::END) break;
     Token &t = ts.peek();
     // print_token(t);
     // putchar('\n');
@@ -109,10 +108,17 @@ void test_compile(Handle<String> code) {
 
   CodeGenerator cg;
   Handle<SharedFunctionData> sfd = cg.Generate(ast);
+  if (sfd.empty()) {
+    printf(Executer::GetException()->info()->cstr());
+    fflush(stdout);
+    exit(0);
+  }
 
   f = fopen("btc.txt", "w");
   fprintf(f, "%s", VisualizeByteCode(sfd)->cstr());
   fclose(f);
+  Parameters param(Heap::NullValue(), nullptr, 0);
+  Handle<Object> ret = Executer::CallFunction(sfd, param);
 }
 int main() {
   freopen("log.txt", "w", stderr);

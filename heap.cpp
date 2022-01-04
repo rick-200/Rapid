@@ -196,6 +196,7 @@ public:
     ALLOC_STRUCT_IMPL(SharedFunctionData);
   }
   ExternVar *AllocExternVar() { ALLOC_STRUCT_IMPL(ExternVar); }
+  FunctionData *AllocFunctionData() { ALLOC_STRUCT_IMPL(FunctionData); }
   uint64_t ObjectCount() { return this->m_object_count; }
   void DoGC() {
     DBG_LOG("begin gc\n");
@@ -269,6 +270,9 @@ SharedFunctionData *Heap::AllocSharedFunctionData() {
   return CALL_HEAP_IMPL(AllocSharedFunctionData);
 }
 ExternVar *Heap::AllocExternVar() { return CALL_HEAP_IMPL(AllocExternVar); }
+FunctionData *Heap::AllocFunctionData() {
+  return CALL_HEAP_IMPL(AllocFunctionData);
+}
 uint64_t Heap::ObjectCount() { return CALL_HEAP_IMPL(ObjectCount); }
 void Heap::DoGC() { return CALL_HEAP_IMPL(DoGC); }
 

@@ -159,6 +159,7 @@
     <ClInclude Include="ast.h" />
     <ClInclude Include="ast_visualizer.h" />
     <ClInclude Include="bytecode.h" />
+    <ClInclude Include="config.h" />
     <ClInclude Include="list.h" />
     <ClInclude Include="compiler.h" />
     <ClInclude Include="engine.h" />

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstring>
 #include <new>
 #include <utility>
 
@@ -6,27 +7,29 @@
 #include "preprocessors.h"
 namespace rapid {
 namespace internal {
-template <class T> class List : public Malloced {
+template <class T>
+class List : public Malloced {
+  static_assert(std::is_trivial_v<T>, "List<T>: T must be trivial type.");
   T *m_p;
   size_t m_siz, m_cap;
 
-private:
+ private:
   void change_capacity(size_t new_cap) {
     T *oldp = m_p;
-    m_p = new (std::nothrow) T[new_cap];
+    m_p = (T *)Alloc(sizeof(T) * new_cap);
     VERIFY(m_p != nullptr);
-    for (size_t i = 0; i < m_siz; i++)
-      new (m_p + i) T(std::move(oldp[i]));
-    delete[] oldp;
+    memcpy(m_p, oldp, sizeof(T) * m_siz);
+    Free(oldp);
     m_cap = new_cap;
   }
 
-public:
+ public:
   List() : m_p(nullptr), m_siz(0), m_cap(0) {}
   ~List() { delete[] m_p; }
   T *begin() const { return m_p; }
   T *end() const { return m_p + m_siz; }
   size_t size() const { return m_siz; }
+  bool empty() { return m_siz == 0; }
   size_t capacity() const { return m_cap; }
   T &operator[](size_t pos) { return m_p[pos]; }
   const T &operator[](size_t pos) const { return m_p[pos]; }
@@ -50,8 +53,7 @@ public:
     m_siz = new_size;
   }
   void reserve(size_t size) {
-    if (size <= m_cap)
-      return;
+    if (size <= m_cap) return;
     change_capacity(std::max(size, m_cap << 1));
   }
   void shrink_to_fit() { change_capacity(m_siz); }
@@ -61,11 +63,12 @@ public:
   T &front() { return *m_p; }
   T &back() { return m_p[m_siz - 1]; }
 };
-template <class T> class ListView {
+template <class T>
+class ListView {
   T *m_p;
   size_t m_siz;
 
-public:
+ public:
   ListView(const List<T> &list) : m_p(list.begin()), m_siz(list.length()) {}
   ListView(T *p, size_t siz) : m_p(p), m_siz(siz) {}
   T &operator[](size_t pos) {
@@ -78,5 +81,5 @@ public:
   }
 };
 
-} // namespace internal
-} // namespace rapid
+}  // namespace internal
+}  // namespace rapid

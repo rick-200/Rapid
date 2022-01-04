@@ -15,6 +15,7 @@ class VarData;
 class ExternVarData;
 class ExternVar;
 class SharedFunctionData;
+class FunctionData;
 class InstructionArray;
 class Exception;
 class Heap : public StaticClass {
@@ -41,6 +42,8 @@ public: //以下函数不会调用GC
   static ExternVarData *AllocExternVarData();
   static SharedFunctionData *AllocSharedFunctionData();
   static ExternVar *AllocExternVar();
+  static FunctionData *AllocFunctionData();
+
   static uint64_t ObjectCount();
 
 public:

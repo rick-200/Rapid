@@ -83,12 +83,20 @@ class HandleScope {
 //  bool empty() { return m_location == nullptr; }
 //};
 
+
+struct non_local_t {};
+//构造Handle<T>时使用，表示对象已经做好GC保护，不再开辟LocalSlot
+constexpr non_local_t non_local;
+
+//对对象指针的简单封装
+//Handle包裹的指针保证在此Handle生命周期内不会被GC回收
+//默认使用HandleScope进行管理
 template <class T>
 class Handle {
   T* m_p;
 
  public:
-  Handle() { m_p = nullptr; }
+  Handle() = default;
   Handle(const Handle&) = default;
   Handle& operator=(const Handle&) = default;
   explicit Handle(T* p) {
@@ -97,6 +105,9 @@ class Handle {
     else
       m_p = nullptr;
   }
+
+  //不使用HandleScope管理，必须保证对象在此Handle生命周期内不会被GC回收
+  explicit Handle(T* p, const non_local_t&) : m_p(p) {}
 
   template <class TOther,
             std::enable_if_t<std::is_convertible_v<TOther*, T*>, int> = 0>
@@ -107,6 +118,7 @@ class Handle {
   T* ptr() const { return m_p; }
   T* operator->() const { return m_p; }
   T* operator*() { return m_p; }
+
   bool empty() const { return m_p == nullptr; }
 
   template <class TOther>
@@ -116,6 +128,7 @@ class Handle {
     return ret;
   }
 };
+
 
 template <class T>
 class GlobalHandle {
