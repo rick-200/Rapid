@@ -332,6 +332,10 @@ class Parser {
         REQUIRE(TokenType::BK_SR);
         return p;
       }
+      case TokenType::IMPORT: {
+        CONSUME;
+        return AllocImportExpr(ALLOC_PARAM);
+      }
     }
     StringBuilder sb;
     const char *now_t = tokentype_tostr(TK.t);
@@ -828,6 +832,14 @@ class CodeGenerator : public ASTVisitor {
   [[noreturn]] void error_symbol_notfound(VarExpr *p) {
     error_symbol_notfound(p->row, p->col, p->name);
   }
+  [[noreturn]] void error_illegal_use(int row, int col, const char *name) {
+    StringBuilder sb;
+    sb.AppendFormat("syntax_error(%d,%d): Illegal use of '%s'", row, col, name);
+    Handle<Exception> e = Factory::NewException(
+        Factory::NewString("syntax_error"), sb.ToString());
+    Executer::ThrowException(e);
+    longjmp(*error_env, 1);
+  }
   uint16_t AddVar(Handle<String> name) {
     uint16_t pos = (uint16_t)ctx->var.size();
     VarCtx vc;
@@ -922,6 +934,7 @@ class CodeGenerator : public ASTVisitor {
   void VisitAssignExpr(AssignExpr *p, bool from_expr_stat);
   virtual void VisitThisExpr(ThisExpr *node);
   virtual void VisitParamsExpr(ParamsExpr *node);
+  virtual void VisitImportExpr(ImportExpr *node);
 };
 
 }  // namespace internal

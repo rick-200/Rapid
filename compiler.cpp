@@ -102,7 +102,7 @@ void TokenStream::ReadTokenString() {
         goto l_endstr;
       case '\r':
       case '\n':
-        VERIFY(0);
+        VERIFY(0);  // TODO
         break;
       case '\\': {
         Step();
@@ -388,6 +388,9 @@ l_begin_switch:
       if (strnequal(ps, "if")) {
         InitToken(TokenType::IF);
         Step(2);
+      } else if (strnequal(ps, "import")) {
+        InitToken(TokenType::IMPORT);
+        Step(6);
       } else {
         ReadTokenSymbol();
       }
@@ -507,7 +510,9 @@ TokenStream::TokenStream(const char *s)
 
 Token &TokenStream::peek() { return t; }
 
-void TokenStream::consume() { ReadToken(); }
+void TokenStream::consume() { 
+  ReadToken();
+}
 
 //-----------------------------------------------------------------------
 
@@ -788,10 +793,16 @@ void CodeGenerator::VisitAssignExpr(AssignExpr *p) {
 }
 
 void CodeGenerator::VisitCallExpr(CallExpr *p) {
-  if (p->callee->type ==
-      AstNodeType::MemberExpr) {  //对成员函数的调用，生成THIS_CALL
-    Visit(((MemberExpr *)p)->target);
-    LoadK(((MemberExpr *)p)->name);
+  if (p->callee->type == AstNodeType::ImportExpr) {  // TODO
+    for (auto node : p->params) {
+      Visit(node);
+    }
+    AppendOp(Opcode::IMPORT);
+    AppendU16((uint16_t)p->params.size());
+  } else if (p->callee->type ==
+             AstNodeType::MemberExpr) {  //对成员函数的调用，生成THIS_CALL
+    Visit(((MemberExpr *)p->callee)->target);
+    LoadK(((MemberExpr *)p->callee)->name);
     for (auto node : p->params) {
       Visit(node);
     }
@@ -837,6 +848,10 @@ void CodeGenerator::VisitThisExpr(ThisExpr *p) { AppendOp(Opcode::LOAD_THIS); }
 
 void CodeGenerator::VisitParamsExpr(ParamsExpr *p) {
   AppendOp(Opcode::LOAD_PARAMS);
+}
+
+void CodeGenerator::VisitImportExpr(ImportExpr *p) {
+  error_illegal_use(p->row, p->col, "import");
 }
 
 }  // namespace internal

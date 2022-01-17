@@ -19,6 +19,7 @@ enum class Opcode : uint8_t {
   LOAD_THIS,
   LOAD_PARAMS,
   STOREE,
+  IMPORT,
   COPY,  //复制栈顶并push到栈上
   POP,
 
@@ -89,6 +90,7 @@ enum class TokenType {
   CONTINUE,
   BREAK,
   EXPORT,
+  IMPORT,
   CONST,
   TRY,
   CATCH,

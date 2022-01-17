@@ -112,7 +112,6 @@ class Object {
   inline bool IsFloat() { return TEST_PTR_TAG(this, TAG_FLOAT); }
   inline bool IsFailure() { return TEST_PTR_TAG(this, TAG_FAILURE); }
   inline bool IsHeapObject() { return TEST_PTR_TAG(this, TAG_HEAPOBJ); }
-
 #define DEF_ISXXX(_t) inline bool Is##_t();
   ITER_HEAPOBJ_DERIVED_FINAL(DEF_ISXXX);
 
@@ -236,7 +235,7 @@ class NativeObject : public HeapObject {
   void *m_p;
   void *m_data;
   void *m_gc_callback;
-  const ObjectInterface *custom_interface;
+  ObjectInterface *custom_interface;
 
  public:
 };
@@ -748,6 +747,7 @@ class SharedFunctionData : public Struct {
   FixedArray *extvars;
   size_t max_stack;
   size_t param_cnt;
+
  private:
   DECL_TRACEREF(SharedFunctionData, _M(name), _M(instructions), _M(kpool),
                 _M(inner_func), _M(vars), _M(extvars));

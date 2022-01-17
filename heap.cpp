@@ -199,6 +199,7 @@ public:
   FunctionData *AllocFunctionData() { ALLOC_STRUCT_IMPL(FunctionData); }
   uint64_t ObjectCount() { return this->m_object_count; }
   void DoGC() {
+    return;//NO_GC
     DBG_LOG("begin gc\n");
     this->m_color = (this->m_color + 1) & 1;
     GCTracer gct(this->m_color);

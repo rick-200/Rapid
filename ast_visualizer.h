@@ -108,7 +108,7 @@ class VisualizerVisitor : public ASTVisitor {
     DefNode("var");
     int var = ret;
     for (size_t i = 0; i < node->decl.size(); i++) {
-      DefNode(node->decl[i].name);
+      DefNode(node->decl[i].name->cstr());
       int name = ret;
       Connect(var, name);
       if (node->decl[i].init) {
@@ -143,13 +143,13 @@ class VisualizerVisitor : public ASTVisitor {
   }
   virtual void VisitBreakStat(BreakStat *node) { DefNode("break"); }
   virtual void VisitContinueStat(ContinueStat *node) { DefNode("continue"); }
-  virtual void VisitVarExpr(VarExpr *node) { DefNode(node->name); }
+  virtual void VisitVarExpr(VarExpr *node) { DefNode(node->name->cstr()); }
   virtual void VisitMemberExpr(MemberExpr *node) {
     DefNode(".");
     int dot = ret;
     Visit(node->target);
     int target = ret;
-    DefNode(node->name);
+    DefNode(node->name->cstr());
     int name = ret;
     Connect(dot, target);
     Connect(dot, name);
@@ -221,11 +221,14 @@ class VisualizerVisitor : public ASTVisitor {
     }
     ret = call;
   }
-  virtual void VisitThisExpr(rapid::internal::ThisExpr *node) {
+  virtual void VisitThisExpr(ThisExpr *node) {
     DefNode("this");
   }
-  virtual void VisitParamsExpr(rapid::internal::ParamsExpr *node) {
+  virtual void VisitParamsExpr(ParamsExpr *node) {
     DefNode("params");
+  }
+  virtual void VisitImportExpr(ImportExpr *node) {
+    DefNode("import");
   }
 };
 
@@ -265,6 +268,7 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
       CASE_u16(LOADK);
       CASE_u16(LOADE);
       CASE_u16(STOREE);
+      CASE_u16(IMPORT);
       CASE_0(LOAD_THIS);
       CASE_0(LOAD_PARAMS);
       CASE_0(COPY);
@@ -297,6 +301,7 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
       CASE_0(NEG);
       CASE_0(ACT);
       CASE_u16(CALL);
+      CASE_u16(THIS_CALL);
       CASE_0(RET);
       CASE_0(RETNULL);
       CASE_s16(JMP);

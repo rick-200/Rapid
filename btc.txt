@@ -1,20 +1,19 @@
-fuction '#global'@000001F82F376B40:
-  instructions(26 bytes):
+fuction '#global'@0000029782655470:
+  instructions(23 bytes):
     000: LOADK 0
-    003: STOREL 0
-    006: LOADK 0
-    009: STOREL 1
-    012: LOADL 0
-    015: LOADL 1
-    018: ADD
-    019: STOREL 2
-    022: LOADL 2
-    025: RET
-  locals(3):
-    0 a
-    1 b
-    2 c
-  consts(1):
-    0 1
+    003: IMPORT 1
+    006: STOREL 0
+    009: LOADL 0
+    012: LOADK 1
+    015: LOADK 2
+    018: THIS_CALL 1
+    021: POP
+    022: RETNULL
+  locals(1):
+    0 console
+  consts(3):
+    0 'console'
+    1 'print'
+    2 'abc'
   inner func(0):
 
