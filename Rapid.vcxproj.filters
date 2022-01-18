@@ -13,8 +13,8 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="header">
-      <UniqueIdentifier>{439dd325-1712-42c4-bda4-637cf09245d3}</UniqueIdentifier>
+    <Filter Include="standard_module">
+      <UniqueIdentifier>{c67e85ca-4a7b-4003-9414-6c84bb14868e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -53,6 +53,9 @@
     </ClCompile>
     <ClCompile Include="executer.cpp">
       <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="console.cpp">
+      <Filter>standard_module</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -115,6 +118,9 @@
     </ClInclude>
     <ClInclude Include="config.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="console.h">
+      <Filter>standard_module</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

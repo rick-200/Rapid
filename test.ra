@@ -1,4 +1,6 @@
 var console=import("console");
 console.print("abc");
 
-
+for(var i=0;i<100;i+=1){
+    console.print(i);
+}

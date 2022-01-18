@@ -1,19 +1,36 @@
-fuction '#global'@0000029782655470:
-  instructions(23 bytes):
+fuction '#global'@0000025FE4EF3320, (5)slots:
+  instructions(55 bytes):
     000: LOADK 0
-    003: IMPORT 1
-    006: STOREL 0
-    009: LOADL 0
-    012: LOADK 1
-    015: LOADK 2
-    018: THIS_CALL 1
-    021: POP
-    022: RETNULL
-  locals(1):
+    003: IMPORT
+    004: LOADL 0
+    007: LOADK 1
+    010: LOADK 2
+    013: THIS_CALL 1
+    016: POP
+    017: LOADK 3
+    020: LOADL 2
+    023: LOADK 4
+    026: LT
+    027: JMP_F 25
+    030: LOADL 0
+    033: LOADK 1
+    036: LOADL 2
+    039: THIS_CALL 1
+    042: POP
+    043: LOADK 5
+    046: STOREL 2
+    049: JMP -29
+    052: POPN 1
+    054: RETNULL
+  locals(2):
     0 console
-  consts(3):
+    1 i
+  consts(6):
     0 'console'
     1 'print'
     2 'abc'
+    3 0
+    4 100
+    5 1
   inner func(0):
 

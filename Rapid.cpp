@@ -21,7 +21,7 @@ class A {
   auto acc_x() {}
 };
 
-void print_object(Object *obj) {
+void print_object(Object* obj) {
   if (obj->IsNull())
     printf("null");
   else if (obj->IsInteger())
@@ -35,7 +35,7 @@ void print_object(Object *obj) {
   else
     printf("[object]");
 }
-void print_token(const Token &t) {
+void print_token(const Token& t) {
   printf("[%d,%d] ", t.row, t.col);
   switch (t.t) {
 #define PRINT_ITERATOR(_t, _s) \
@@ -56,14 +56,14 @@ void print_token(const Token &t) {
 }
 char buff[1024 * 1024 * 128];
 
-void do_tokenlize(int64_t *ti, int64_t *cnt) {
+void do_tokenlize(int64_t* ti, int64_t* cnt) {
   std::chrono::high_resolution_clock::time_point t1 =
       std::chrono::high_resolution_clock::now();
   HandleScope hs;
   TokenStream ts(buff);
   while (true) {
     if (ts.peek().t == TokenType::END) break;
-    Token &t = ts.peek();
+    Token& t = ts.peek();
     // print_token(t);
     // putchar('\n');
     ++*cnt;
@@ -79,14 +79,14 @@ void test_parse(Handle<String> code) {
   Parser parser;
   std::chrono::high_resolution_clock::time_point t =
       std::chrono::high_resolution_clock::now();
-  FuncDecl *ast = parser.ParseModule(code);
+  FuncDecl* ast = parser.ParseModule(code);
   std::chrono::nanoseconds tt = std::chrono::high_resolution_clock::now() - t;
   printf("%.2fus.\n", tt.count() / 1000.0);
   printf("%.2fms.\n", tt.count() / 1000.0 / 1000.0);
   printf("%.2fKiB.\n", CompilingMemoryZone::GetUsage() / 1024.0);
   return;
   Handle<String> vs = VisualizeAST(ast);
-  FILE *f = fopen("graph.md", "w");
+  FILE* f = fopen("graph.md", "w");
   fprintf(f, "```mermaid\ngraph LR\n");
   fprintf(f, "%s", vs->cstr());
   fprintf(f, "```\n");
@@ -94,13 +94,13 @@ void test_parse(Handle<String> code) {
 }
 void test_compile(Handle<String> code) {
   Parser parser;
-  FuncDecl *ast = parser.ParseModule(code);
+  FuncDecl* ast = parser.ParseModule(code);
   if (ast == nullptr) {
     printf(Executer::GetException()->info()->cstr());
     fflush(stdout);
     exit(0);
   }
-  FILE *f = fopen("graph.md", "w");
+  FILE* f = fopen("graph.md", "w");
   fprintf(f, "```mermaid\ngraph LR\n");
   fprintf(f, "%s", VisualizeAST(ast)->cstr());
   fprintf(f, "```\n");
@@ -122,14 +122,14 @@ void test_compile(Handle<String> code) {
 }
 int main() {
   freopen("log.txt", "w", stderr);
-  FILE *f = fopen("test.ra", "r");
+  FILE* f = fopen("test.ra", "r");
   size_t siz = fread(buff, 1, 1024 * 1024 * 128, f);
   fclose(f);
   buff[siz] = '\0';
   Engine::Init();
   HandleScope hs;
   Handle<String> code = Factory::NewString(buff);
-
+  
   CompilingMemoryZone::PrepareAlloc();
   test_compile(code);
   // HandleScope hs;

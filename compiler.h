@@ -686,6 +686,7 @@ struct ExtVarCtx {
 };
 struct FunctionCtx {
   Handle<String> name;
+  ZoneList<VarCtx> allvar;
   ZoneList<VarCtx> var;
   ZoneList<ExtVarCtx> extvar;
   ZoneList<Handle<Object>> kpool;
@@ -720,7 +721,7 @@ inline LoopCtx *AllocLoopCtx() {
   new (p) LoopCtx();
   return p;
 }
-// TODO: stroe后的pop
+
 class CodeGenerator : public ASTVisitor {
  public:
   static constexpr uint16_t invalid_pos = 65535U;
@@ -754,10 +755,10 @@ class CodeGenerator : public ASTVisitor {
     sfd->instructions = *Factory::NewInstructionArray(ctx->cmd.size());
     memcpy(sfd->instructions->begin(), ctx->cmd.begin(),
            sizeof(Cmd) * ctx->cmd.size());
-    sfd->vars = *Factory::NewFixedArray(ctx->var.size());
-    for (size_t i = 0; i < ctx->var.size(); i++) {
+    sfd->vars = *Factory::NewFixedArray(ctx->allvar.size());
+    for (size_t i = 0; i < ctx->allvar.size(); i++) {
       Handle<VarData> vd = Factory::NewVarData();
-      vd->name = *ctx->var[i].name;
+      vd->name = *ctx->allvar[i].name;
       sfd->vars->set(i, *vd);
     }
     sfd->extvars = *Factory::NewFixedArray(0);
@@ -784,6 +785,7 @@ class CodeGenerator : public ASTVisitor {
     Codepos cp = CurrentPos();
     AppendOp(cond ? Opcode::JMP_T : Opcode::JMP_F);
     AppendU16((uint16_t)0);
+    pop();
     return cp;
   }
   void ApplyJump(Codepos from, Codepos to) {
@@ -809,15 +811,29 @@ class CodeGenerator : public ASTVisitor {
     ASSERT(v == *(uint32_t *)&ctx->cmd[ctx->cmd.size() - 4]);
   }
   void AppendS16(int16_t v) { AppendU16(*(uint16_t *)&v); }
-  void AppendOp(Opcode op) { AppendU8((uint8_t)op); }
+  void AppendOp(Opcode op) {
+    AppendU8((uint8_t)op);
+    printf("append:%d %lld\n", op, ctx->top);
+  }
   void push() {
     ++ctx->top;
     if (ctx->top > ctx->max_stack) ctx->max_stack = ctx->top;
   }
-  void pop(uint16_t size = 1) { ctx->top -= size; }
+  void pop(uint16_t size = 1) {
+    ctx->top -= size; 
+  }
   void EnterScope() { ctx->var.push(VarCtx{Handle<String>()}); }
   void LeaveScope() {
-    while (!ctx->var.back().name.empty()) ctx->var.pop();
+    uint32_t cnt = 0;
+    while (!ctx->var.back().name.empty()) {
+      ctx->var.pop();
+      pop();
+      ++cnt;
+    }
+    VERIFY(cnt < 256);
+    AppendOp(Opcode::POPN);
+    AppendU8((uint8_t)cnt);
+    ctx->var.pop();
   }
   [[noreturn]] void error_symbol_notfound(int row, int col,
                                           Handle<String> name) {
@@ -845,6 +861,8 @@ class CodeGenerator : public ASTVisitor {
     VarCtx vc;
     vc.name = name;
     ctx->var.push(vc);
+    ctx->allvar.push(vc);
+    //push(); -- 不需要push，只要不pop就好了
     return pos;
   }
   uint16_t FindVar(Handle<String> name) {
@@ -852,6 +870,7 @@ class CodeGenerator : public ASTVisitor {
     size_t i = ctx->var.size();
     do {
       --i;
+      if (ctx->var[i].name.empty()) continue;  // Scope标识，跳过
       if (String::Equal(*name, *ctx->var[i].name)) {
         return (uint16_t)i;
       }
@@ -870,8 +889,6 @@ class CodeGenerator : public ASTVisitor {
     return ret;
   }
   void LoadK(Handle<Object> v) {
-    ++ctx->top;
-    ctx->max_stack = std::max(ctx->max_stack, ctx->top);
     uint16_t pos = FindConst(v);
     AppendOp(Opcode::LOADK);
     AppendU16(pos);
@@ -879,8 +896,6 @@ class CodeGenerator : public ASTVisitor {
   }
   //尝试生成LoadL指令，若成功，返回true
   bool LoadL(Handle<String> name) {
-    ++ctx->top;
-    ctx->max_stack = std::max(ctx->max_stack, ctx->top);
     uint16_t pos = FindVar(name);
     if (pos == invalid_pos) return false;
     AppendOp(Opcode::LOADL);

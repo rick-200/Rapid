@@ -11,9 +11,8 @@ static_assert(sizeof(void*) == 8, "当前只能在64位机器上使用！");
 #else
 #define ASSERT(exp) ASSUME(exp)
 #endif
-// VERIFY为开发中暂时使用，后期全部换成throw exception
-#define VERIFY(exp) assert(exp)
-
+// VERIFY为开发中暂时使用，后期全部换成错误处理
+#define VERIFY(exp) (assert(exp))
 
 #define DISABLE_COPY(_t)  \
   _t(const _t&) = delete; \

@@ -42,7 +42,7 @@ class Parameters : public RawParameters {
   Parameters(Handle<Object> this_obj, Handle<Object> *p, size_t cnt)
       : RawParameters(this_obj.ptr(), reinterpret_cast<Object **>(p), cnt) {
 #ifdef _DEBUG
-    for (size_t i = 0; i < cnt; i++)
+    for (size_t i = 0; i < cnt; i++)  // Handle里应只有一个指针
       ASSERT(RawParameters::get(i) == p[i].ptr());
 #endif
   }

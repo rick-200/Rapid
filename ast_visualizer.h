@@ -221,15 +221,9 @@ class VisualizerVisitor : public ASTVisitor {
     }
     ret = call;
   }
-  virtual void VisitThisExpr(ThisExpr *node) {
-    DefNode("this");
-  }
-  virtual void VisitParamsExpr(ParamsExpr *node) {
-    DefNode("params");
-  }
-  virtual void VisitImportExpr(ImportExpr *node) {
-    DefNode("import");
-  }
+  virtual void VisitThisExpr(ThisExpr *node) { DefNode("this"); }
+  virtual void VisitParamsExpr(ParamsExpr *node) { DefNode("params"); }
+  virtual void VisitImportExpr(ImportExpr *node) { DefNode("import"); }
 };
 
 inline Handle<String> VisualizeAST(AstNode *node) {
@@ -249,6 +243,11 @@ inline Handle<String> VisualizeAST(AstNode *node) {
     sb.AppendString(#_op " ").AppendInt(*(uint16_t *)(pc + 1)); \
     pc += 3;                                                    \
     break;
+#define CASE_u8(_op)                                           \
+  case Opcode::_op:                                            \
+    sb.AppendString(#_op " ").AppendInt(*(uint8_t *)(pc + 1)); \
+    pc += 2;                                                   \
+    break;
 #define CASE_s16(_op)                                          \
   case Opcode::_op:                                            \
     sb.AppendString(#_op " ").AppendInt(*(int16_t *)(pc + 1)); \
@@ -256,7 +255,8 @@ inline Handle<String> VisualizeAST(AstNode *node) {
     break;
 inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
   StringBuilder sb;
-  sb.AppendFormat("fuction '%s'@%p:\n", sfd->name->cstr(), *sfd);
+  sb.AppendFormat("fuction '%s'@%p, (%d)slots:\n", sfd->name->cstr(), *sfd,
+                  sfd->max_stack);
   sb.AppendFormat("  instructions(%llu bytes):\n", sfd->instructions->length());
   uint8_t *pc = sfd->instructions->begin();
   while (pc - sfd->instructions->begin() < sfd->instructions->length()) {
@@ -268,10 +268,13 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
       CASE_u16(LOADK);
       CASE_u16(LOADE);
       CASE_u16(STOREE);
-      CASE_u16(IMPORT);
+      CASE_0(IMPORT);
       CASE_0(LOAD_THIS);
       CASE_0(LOAD_PARAMS);
       CASE_0(COPY);
+      CASE_0(PUSH_NULL);
+      CASE_0(POP);
+      CASE_u8(POPN);
       CASE_0(ADD);
       CASE_0(SUB);
       CASE_0(MUL);
@@ -284,7 +287,6 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
       CASE_0(BXOR);
       CASE_0(SHL);
       CASE_0(SHR);
-      CASE_0(POP);
       CASE_0(NOT);
       CASE_0(AND);
       CASE_0(OR);

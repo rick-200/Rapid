@@ -9,6 +9,38 @@
 namespace rapid {
 namespace internal {
 
+//相对于整个栈最底部的偏移量
+enum class StackOffset : uintptr_t {};
+inline StackOffset AddOffset(StackOffset so, intptr_t offset) {
+  return static_cast<StackOffset>(static_cast<intptr_t>(so) + offset);
+}
+class ScriptStack {
+  Object **m_p;
+  size_t m_size;
+
+ public:
+  ScriptStack() {
+    m_size = Config::InitialStackSlotCount;
+    m_p = (Object **)malloc(sizeof(Object *) * Config::InitialStackSlotCount);
+  }
+  Object **GetRawPtr(StackOffset so) {
+    return m_p + static_cast<uintptr_t>(so);
+  }
+  StackOffset GetOffset(Object **p) {
+    ASSERT(p >= m_p && p < m_p + m_size);
+    return static_cast<StackOffset>(p - m_p);
+  }
+  //在top的基础上保留至少need个slot
+  //注意：Reserve调用后，之前GetRawPtr返回值（可能）失效
+  void Reserve(StackOffset top, size_t need) {
+    size_t oldsize = m_size;
+    Object **oldp = m_p;
+    m_size = std::max(m_size << 1, (size_t)(GetRawPtr(top) + need - m_p));
+    m_p = (Object **)malloc(sizeof(Object *) * m_size);
+    VERIFY(m_p != nullptr);
+    memcpy(m_p, oldp, sizeof(Object *) * oldsize);
+  }
+};
 class Stack {
   Object *m_data;
   size_t size;
@@ -16,7 +48,7 @@ class Stack {
 enum class CallType {
   FullCall,       //调用FunctionData
   StatelessCall,  //调用SharedFunctionData，即函数不访问外部变量
-  NativeCall,     //调用NativeFunction
+  NativeCall,     //从C++调用脚本函数，用于获取返回值
 };
 struct CallInfo {
   CallType t;
@@ -26,13 +58,13 @@ struct CallInfo {
     NativeFunction *nf;
   };
   Object *this_object;
-  Object **base;
-  Object **top;  // top指向栈顶元素（不是栈顶+1）
-  byte *pc;
+  StackOffset base;  //栈底
+  StackOffset top;   // top指向栈顶元素（不是栈顶+1）
+  byte *pc;          //当前字节码指针
 };
 #define I(_obj) (Integer::cast(_obj)->value())
 #define F(_obj) (Float::cast(_obj)->value())
-#define MI(_obj)
+//#define MI(_obj)
 inline Object *Wrap(int64_t v) { return Integer::FromInt64(v); }
 inline Object *Wrap(double v) { return Float::FromDouble(v); }
 inline Object *Add(Object *a, Object *b) {
@@ -173,51 +205,22 @@ DEF_CMP_OP(Greater, >);
 DEF_CMP_OP(GreaterEq, >=);
 DEF_CMP_OP(Equal, ==);
 DEF_CMP_OP(NotEqual, !=);
-#define EXEC_BINOP(_name) \
-  --top;                  \
-  top[0] = _name(top[0], top[1]);
+#define EXEC_BINOP(_name)           \
+  top[-1] = _name(top[-1], top[0]); \
+  --top;
 #define EXEC_UNOP(_name) top[0] = _name(top[0]);
 
 class ExecuterImpl : public Executer {
-  struct {
-    Object **p;
-    size_t size;
-  } m_stack;
+  ScriptStack m_stack;
   List<CallInfo> list_ci;
   Exception *err;
+  Object ***ptr_top;  //指向当前Execute栈上的top指针，用于在gc时确定边界
 
  private:
-  //预留足够的栈空间
-  //在顶部的CallInfo::top基础上进行预留
-  //若栈空间不足，最少扩充2倍
-  void reserve_stack(size_t size) {
-    if (list_ci.size() == 0) {
-      if (m_stack.size < size) {
-        m_stack.size = std::max(m_stack.size << 1, size);
-        m_stack.p = (Object **)Heap::RawAlloc(m_stack.size);
-      }
-    } else {
-      size = list_ci.back().top + size - m_stack.p +
-             1 /*[m_stack.p,top]闭区间*/;  //实际总需求空间
-      if (m_stack.size < size) {
-        m_stack.size = std::max(m_stack.size << 1, size);
-        Object **old_p = m_stack.p;
-        m_stack.p = (Object **)Heap::RawAlloc(m_stack.size);
-        memcpy(
-            m_stack.p, old_p,
-            sizeof(Object *) * (list_ci.back().top - m_stack.p + 1));  //复制栈
-        for (auto &ci : list_ci) {  //修正栈指针
-          ci.base = m_stack.p + (old_p - ci.base);
-          ci.top = m_stack.p + (old_p - ci.top);
-        }
-        Heap::RawFree(old_p);
-      }
-    }
-  }
-
-  //若fd为null，填充FullCall；否则填充StatelessCall，且sfd需等于fd->shared_data
+  //若fd不为null，填充FullCall，且sfd需等于fd->shared_data
+  //否则填充StatelessCall
   void fill_runtime_info(CallInfo *ci, FunctionData *fd,
-                         SharedFunctionData *sfd, Object **base) {
+                         SharedFunctionData *sfd, StackOffset base) {
     if (fd != nullptr) {
       ASSERT(fd->shared_data == sfd);
       ci->t = CallType::FullCall;
@@ -227,27 +230,22 @@ class ExecuterImpl : public Executer {
       ci->sfd = sfd;
     }
     ci->base = base;
-    ci->top = base + sfd->param_cnt;
+    ci->top = AddOffset(base, sfd->param_cnt);
     ci->pc = sfd->instructions->begin();
   }
 
-  void push_callinfo(FunctionData *fd, SharedFunctionData *sfd,
-                     size_t base_offset /*栈底，即第一个参数位置*/) {
-    reserve_stack(sfd->max_stack);
-    CallInfo new_ci;
-    fill_runtime_info(&new_ci, fd, sfd, m_stack.p + base_offset);
-    new_ci.this_object = Heap::NullValue();
-    list_ci.push(new_ci);
-  }
-
-  //处理调用参数，若无法成功处理，TODO:抛出错误并返回false
-  bool process_params(Object **param, size_t cnt, SharedFunctionData *sfd) {
-    if (sfd->param_cnt < cnt) {
+  bool prepare_call(StackOffset top, size_t param_cnt, Object *this_obj,
+                    FunctionData *fd, SharedFunctionData *sfd) {
+    ASSERT(this_obj != nullptr);        // Heap::NullValue();
+    if (sfd->param_cnt != param_cnt) {  //参数不匹配
       return false;
     }
-    Object *null_v = Heap::NullValue();
-    for (size_t i = cnt; i < sfd->param_cnt; i++) param[i] = null_v;
-    return true;
+    StackOffset new_base = AddOffset(top, 1);
+    m_stack.Reserve(new_base, sfd->max_stack);
+    CallInfo new_ci;
+    fill_runtime_info(&new_ci, fd, sfd, new_base);
+    new_ci.this_object = this_obj;
+    list_ci.push(new_ci);
   }
 
   //执行最顶上的CallInfo，直到CallType为NativeCall
@@ -256,8 +254,9 @@ class ExecuterImpl : public Executer {
     CallInfo *ci = &list_ci.back();
     byte *pc = ci->pc;
     // top指向栈顶元素（不是栈顶+1）
-    Object **top = ci->top;
-    Object **base = ci->base;
+    Object **top = m_stack.GetRawPtr(ci->top);
+    ptr_top = &top;  //更新ptr_top，用于gc
+    Object **base = m_stack.GetRawPtr(ci->base);
     Object **kpool;
     Object **inner_func;
     if (ci->t == CallType::FullCall) {
@@ -268,6 +267,7 @@ class ExecuterImpl : public Executer {
       inner_func = ci->sfd->inner_func->begin();
     } else {
       ASSERT(ci->t == CallType::NativeCall);
+      // TODO:NativeCall
       return;
     }
 
@@ -296,10 +296,13 @@ class ExecuterImpl : public Executer {
           top[1] = top[0];
           ++top;
           break;
+        case Opcode::PUSH_NULL:
+          ++top;
+          top[0] = Heap::NullValue();
+          break;
         case Opcode::POP:
           --top;
           break;
-
         case Opcode::ADD:
           EXEC_BINOP(Add);
           break;
@@ -366,10 +369,30 @@ class ExecuterImpl : public Executer {
           EXEC_BINOP(NotEqual)
           break;
 
-        case Opcode::GET_M:
+        case Opcode::GET_M: {
+          String *name = String::cast(*top);
+          --top;
+          Object *obj = *top;
+          if (obj->IsHeapObject()) {
+            *top =
+                HeapObject::cast(obj)->get_interface()->get_member(obj, name);
+          } else {
+            VERIFY(0);  // TODO:值类型的GetMember
+          }
           break;
-        case Opcode::GET_I:
+        }
+
+        case Opcode::GET_I: {
+          Object *idx = *top;
+          --top;
+          Object *obj = *top;
+          if (obj->IsHeapObject()) {
+            *top = HeapObject::cast(obj)->get_interface()->get_index(obj, idx);
+          } else {
+            VERIFY(0);  // TODO:值类型的GetMember
+          }
           break;
+        }
         case Opcode::SET_M:
           break;
         case Opcode::SET_I:
@@ -403,18 +426,19 @@ class ExecuterImpl : public Executer {
           uint16_t cnt = *(uint16_t *)pc;
           pc += 2;
           top -= cnt;  //此时top指向要调用的对象，同时此位置也接受返回值
-          list_ci.back().pc = pc;  //写回
-          list_ci.back().base = base;
-          list_ci.back().top = top;
+          ASSERT(ci == &list_ci.back());
+          ci->pc = pc;                         //写回
+          ci->base = m_stack.GetOffset(base);  //写回
+          ci->top = m_stack.GetOffset(top);    //写回
+          StackOffset off_base = m_stack.GetOffset(base);
+          StackOffset off_top = m_stack.GetOffset(top);
           if (top[0]->IsFunctionData()) {
             FunctionData *fd = FunctionData::cast(top[0]);
-            process_params(top + 1, cnt, fd->shared_data);
-            push_callinfo(fd, fd->shared_data, top + 1 - m_stack.p);
+            prepare_call(off_top, cnt, Heap::NullValue(), fd, fd->shared_data);
             goto l_begin;
           } else if (top[0]->IsSharedFunctionData()) {  //无状态调用
             SharedFunctionData *sfd = SharedFunctionData::cast(top[0]);
-            process_params(top + 1, cnt, sfd);
-            push_callinfo(nullptr, sfd, top + 1 - m_stack.p);
+            prepare_call(off_top, cnt, Heap::NullValue(), nullptr, sfd);
             goto l_begin;
           } else if (top[0]->IsNativeFunction()) {
             Parameters param(nullptr, top + 1, cnt);
@@ -425,16 +449,18 @@ class ExecuterImpl : public Executer {
           break;
         }
         case Opcode::THIS_CALL:
-          VERIFY(0);  // TODO
+          VERIFY(0);  // TODO: THIS_CALL
+
           break;
         case Opcode::RET:
           list_ci.pop();
-          list_ci.back().top[0] = top[0];  //返回值保存至上一层调用的栈顶
+          m_stack.GetRawPtr(list_ci.back().top)[0] =
+              top[0];  //返回值保存至上一层调用的栈顶
           goto l_begin;
           break;
         case Opcode::RETNULL:
           list_ci.pop();
-          list_ci.back().top[0] =
+          m_stack.GetRawPtr(list_ci.back().top)[0] =
               Heap::NullValue();  //返回值保存至上一层调用的栈顶
           goto l_begin;
           break;
@@ -461,31 +487,34 @@ class ExecuterImpl : public Executer {
     }
   }
 
-  void fill_param(const RawParameters &param, Object **p,
-                  SharedFunctionData *sfd) {
-    if (param.count() <= sfd->param_cnt) {
-      for (size_t i = 0; i < param.count(); i++) {
-        p[i] = param.get(i);
-      }
-      Object *null_v = Heap::NullValue();
-      for (size_t i = param.count(); i < sfd->param_cnt; i++) {
-        p[i] = null_v;
-      }
-    } else {
-      // TODO:extvar
-      VERIFY(0);
-    }
-  }
+  // void fill_param(const RawParameters &param, Object **p,
+  //                SharedFunctionData *sfd) {
+  //  if (param.count() <= sfd->param_cnt) {
+  //    for (size_t i = 0; i < param.count(); i++) {
+  //      p[i] = param.get(i);
+  //    }
+  //    Object *null_v = Heap::NullValue();
+  //    for (size_t i = param.count(); i < sfd->param_cnt; i++) {
+  //      p[i] = null_v;
+  //    }
+  //  } else {
+  //    // TODO:extvar
+  //    VERIFY(0);
+  //  }
+  //}
 
   Object *CallFunction(FunctionData *fd, SharedFunctionData *sfd,
                        const RawParameters &param) {
-    reserve_stack(sfd->max_stack + 1 /*返回值*/);
-    Object **base;
-    if (list_ci.empty()) {
-      base = m_stack.p;
-    } else {
-      base = list_ci.back().top + 1;
+    if (sfd->param_cnt != param.count()) {
+      VERIFY(0);  // TODO;
     }
+    StackOffset base;
+    if (list_ci.empty()) {
+      base = static_cast<StackOffset>(0);
+    } else {
+      base = AddOffset(list_ci.back().top, 1);
+    }
+    m_stack.Reserve(base, sfd->max_stack + 1 /*返回值*/);
 
     CallInfo native_ci;
     native_ci.t = CallType::NativeCall;
@@ -493,26 +522,29 @@ class ExecuterImpl : public Executer {
     native_ci.top = base;
     list_ci.push(native_ci);
 
-    base += 1;
-    fill_param(param, base, sfd);
+    base = AddOffset(base, 1);
+
+    Object **pbase = m_stack.GetRawPtr(base);
+    for (size_t i = 0; i < param.count(); i++) pbase[i] = param[i];
+
     CallInfo ci;
     fill_runtime_info(&ci, fd, sfd, base);
     ci.this_object = param.get_this();
     list_ci.push(ci);
 
     Execute();
+
     ASSERT(list_ci.back().t == CallType::NativeCall);
     ASSERT(list_ci.back().base == native_ci.base);
+
     list_ci.pop();
-    return *native_ci.base;
+    return *m_stack.GetRawPtr(native_ci.base);
   }
 
  public:
   static ExecuterImpl *Create() {
     ExecuterImpl *p = (ExecuterImpl *)Heap::RawAlloc(sizeof(ExecuterImpl));
-    p->m_stack.p = (Object **)Heap::RawAlloc(sizeof(Object *) *
-                                             Config::InitialStackSlotCount);
-    p->m_stack.size = Config::InitialStackSlotCount;
+    new (&p->m_stack) ScriptStack();
     new (&p->list_ci) List<CallInfo>();
     p->err = nullptr;
     return p;

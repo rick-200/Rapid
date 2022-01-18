@@ -510,9 +510,7 @@ TokenStream::TokenStream(const char *s)
 
 Token &TokenStream::peek() { return t; }
 
-void TokenStream::consume() { 
-  ReadToken();
-}
+void TokenStream::consume() { ReadToken(); }
 
 //-----------------------------------------------------------------------
 
@@ -524,11 +522,12 @@ void CodeGenerator::VisitWithScope(AstNode *node) {
 
 void CodeGenerator::VisitExpressionStat(ExpressionStat *p) {
   if (p->expr->type == AstNodeType::AssignExpr) {
-    VisitAssignExpr((AssignExpr *)p->expr, false);
+    VisitAssignExpr((AssignExpr *)p->expr, true);
     return;
   }
   Visit(p->expr);
   AppendOp(Opcode::POP);
+  pop();
 }
 
 void CodeGenerator::VisitLiteral(Literal *p) { LoadK(p->value); }
@@ -587,8 +586,9 @@ void CodeGenerator::VisitVarDecl(VarDecl *p) {
     uint16_t pos = AddVar(decl.name);
     if (decl.init) {
       Visit(decl.init);
-      AppendOp(Opcode::STOREL);
-      AppendU16((uint16_t)pos);
+      // AppendOp(Opcode::PUSH); -- 不需要
+    } else {
+      AppendOp(Opcode::PUSH_NULL);
     }
   }
 }
@@ -659,12 +659,14 @@ void CodeGenerator::VisitMemberExpr(MemberExpr *p) {
   Visit(p->target);
   LoadK(p->name);
   AppendOp(Opcode::GET_M);
+  pop();
 }
 
 void CodeGenerator::VisitIndexExpr(IndexExpr *p) {
   Visit(p->target);
   Visit(p->index);
-  AppendOp(Opcode::GET_M);
+  AppendOp(Opcode::GET_I);
+  pop();
 }
 
 void CodeGenerator::VisitUnaryExpr(UnaryExpr *p) {
@@ -794,11 +796,9 @@ void CodeGenerator::VisitAssignExpr(AssignExpr *p) {
 
 void CodeGenerator::VisitCallExpr(CallExpr *p) {
   if (p->callee->type == AstNodeType::ImportExpr) {  // TODO
-    for (auto node : p->params) {
-      Visit(node);
-    }
+    VERIFY(p->params.size() == 1);
+    Visit(p->params[0]);
     AppendOp(Opcode::IMPORT);
-    AppendU16((uint16_t)p->params.size());
   } else if (p->callee->type ==
              AstNodeType::MemberExpr) {  //对成员函数的调用，生成THIS_CALL
     Visit(((MemberExpr *)p->callee)->target);
@@ -818,7 +818,7 @@ void CodeGenerator::VisitCallExpr(CallExpr *p) {
 
 void CodeGenerator::VisitAssignExpr(AssignExpr *p, bool from_expr_stat) {
   Visit(p->right);
-  if (from_expr_stat) {
+  if (!from_expr_stat) {
     AppendOp(Opcode::COPY);
     push();
   }
@@ -830,24 +830,30 @@ void CodeGenerator::VisitAssignExpr(AssignExpr *p, bool from_expr_stat) {
     }
     AppendOp(Opcode::STOREL);
     AppendU16(FindVar(((VarExpr *)p->left)->name));
+    pop();
   } else if (p->left->type == AstNodeType::MemberExpr) {
     Visit(((MemberExpr *)p->left)->target);
+    LoadK(((MemberExpr *)p->left)->name);
     AppendOp(Opcode::SET_M);
-    AppendU16(FindConst(((MemberExpr *)p->left)->name));
+    pop(2);
   } else if (p->left->type == AstNodeType::IndexExpr) {
     Visit(((IndexExpr *)p->left)->target);
     Visit(((IndexExpr *)p->left)->index);
     AppendOp(Opcode::SET_I);
+    pop(2);
   } else {
     ASSERT(0);  //在parser中应报告此类错误
   }
-  pop();
 }
 
-void CodeGenerator::VisitThisExpr(ThisExpr *p) { AppendOp(Opcode::LOAD_THIS); }
+void CodeGenerator::VisitThisExpr(ThisExpr *p) {
+  AppendOp(Opcode::LOAD_THIS);
+  push();
+}
 
 void CodeGenerator::VisitParamsExpr(ParamsExpr *p) {
   AppendOp(Opcode::LOAD_PARAMS);
+  push();
 }
 
 void CodeGenerator::VisitImportExpr(ImportExpr *p) {

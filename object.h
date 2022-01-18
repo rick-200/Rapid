@@ -194,6 +194,7 @@ class HeapObject : public Object {
   const ObjectInterface *m_interface;
 
  public:
+  const ObjectInterface *get_interface() { return m_interface; }
  public:
   DEF_CAST(HeapObject)
   OBJECT_DEF(HeapObject);
@@ -770,6 +771,8 @@ class FunctionData : public Struct {
 };
 #undef DECL_TRACEREF
 #undef _M
+
+
 
 // ----Object Implement--------
 #define IS_HEAPOBJECT(_t) \

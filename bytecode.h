@@ -21,7 +21,11 @@ enum class Opcode : uint8_t {
   STOREE,
   IMPORT,
   COPY,  //复制栈顶并push到栈上
+  // PUSH,  //用于定义变量时将初始值push到栈上 ---
+  // 不需要此指令，因为变量就保存在计算栈上，无需操作
+  PUSH_NULL,  //用于定义变量时将初始值null push到栈上
   POP,
+  POPN,//pop n个，u8
 
   ADD,
   SUB,
@@ -48,10 +52,10 @@ enum class Opcode : uint8_t {
   EQ,   //==
   NEQ,  //!=
 
-  GET_M,
-  GET_I,
-  SET_M,
-  SET_I,
+  GET_M,  // obj name
+  GET_I,  // obj index
+  SET_M,  // value obj name
+  SET_I,  // value obj index
 
   JMP,
   JMP_T,  //消耗栈顶元素
@@ -60,8 +64,8 @@ enum class Opcode : uint8_t {
   NEG,
   ACT,
 
-  CALL,       // 3 -> func p1 p2 p3
-  THIS_CALL,  // 3 -> obj func_name p1 p2 p3
+  CALL,       // CALL 3 -> func p1 p2 p3
+  THIS_CALL,  // THIS_CALL 3 -> obj func_name p1 p2 p3
               //
   RET,
   RETNULL,
