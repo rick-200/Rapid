@@ -555,8 +555,11 @@ void CodeGenerator::VisitIfStat(IfStat *p) {
 void CodeGenerator::VisitLoopStat(LoopStat *p) {
   EnterScope();  //整个循环为一个scope，以便for定义循环变量
   LoopCtx *upper = loop_ctx;
+
   LoopCtx *current = AllocLoopCtx();
+
   loop_ctx = nullptr;  //不允许init出现break和continue
+
   Visit(p->init);
   Codepos begin = CurrentPos();
   Visit(p->cond);
@@ -598,8 +601,12 @@ void CodeGenerator::VisitFuncDecl(FuncDecl *p) {
   fc->name = p->name;
   fc->param_cnt = p->param.size();
   fc->top = fc->max_stack = p->param.size();
-  for (auto &param : p->param) {
-    fc->var.push(VarCtx{param});
+  for (size_t i = 0; i < p->param.size(); i++) {
+    VarCtx vc;
+    vc.name = p->param[i];
+    vc.slot_id = (uint16_t)i;
+    fc->var.push(vc);
+    fc->allvar.push(vc);
   }
   if (ctx == nullptr) {
     ctx = fc;
@@ -796,7 +803,9 @@ void CodeGenerator::VisitAssignExpr(AssignExpr *p) {
 
 void CodeGenerator::VisitCallExpr(CallExpr *p) {
   if (p->callee->type == AstNodeType::ImportExpr) {  // TODO
-    VERIFY(p->params.size() == 1);
+    if (p->params.size() != 1) {
+      error_illegal_use(p->row, p->col, "import");
+    }
     Visit(p->params[0]);
     AppendOp(Opcode::IMPORT);
   } else if (p->callee->type ==
@@ -817,11 +826,59 @@ void CodeGenerator::VisitCallExpr(CallExpr *p) {
 }
 
 void CodeGenerator::VisitAssignExpr(AssignExpr *p, bool from_expr_stat) {
-  Visit(p->right);
+  if (p->opt == TokenType::ASSIGN) {
+    Visit(p->right);
+  } else {
+    Visit(p->left);
+    Visit(p->right);
+    switch (p->opt) {
+      case TokenType::ADD_ASSIGN:
+        AppendOp(Opcode::ADD);
+        break;
+      case TokenType::SUB_ASSIGN:
+        AppendOp(Opcode::SUB);
+        break;
+      case TokenType::MUL_ASSIGN:
+        AppendOp(Opcode::MUL);
+        break;
+      case TokenType::IDIV_ASSIGN:
+        AppendOp(Opcode::IDIV);
+        break;
+      case TokenType::FDIV_ASSIGN:
+        AppendOp(Opcode::FDIV);
+        break;
+      case TokenType::MOD_ASSIGN:
+        AppendOp(Opcode::MOD);
+        break;
+      case TokenType::BAND_ASSIGN:
+        AppendOp(Opcode::BAND);
+        break;
+      case TokenType::BOR_ASSIGN:
+        AppendOp(Opcode::BOR);
+        break;
+      case TokenType::BNOT_ASSIGN:
+        AppendOp(Opcode::BNOT);
+        break;
+      case TokenType::BXOR_ASSIGN:
+        AppendOp(Opcode::BXOR);
+        break;
+      case TokenType::SHL_ASSIGN:
+        AppendOp(Opcode::SHL);
+        break;
+      case TokenType::SHR_ASSIGN:
+        AppendOp(Opcode::SHR);
+        break;
+      default:
+        ASSERT(0);
+    }
+    pop();
+  }
+
   if (!from_expr_stat) {
     AppendOp(Opcode::COPY);
     push();
   }
+
   if (p->left->type == AstNodeType::VarExpr) {
     uint16_t pos = FindVar(((VarExpr *)p->left)->name);
     if (pos == invalid_pos) {

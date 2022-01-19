@@ -233,94 +233,23 @@ inline Handle<String> VisualizeAST(AstNode *node) {
   return sb.ToString();
 }
 
-#define CASE_0(_op)        \
-  case Opcode::_op:        \
-    sb.AppendString(#_op); \
-    ++pc;                  \
-    break;
-#define CASE_u16(_op)                                           \
-  case Opcode::_op:                                             \
-    sb.AppendString(#_op " ").AppendInt(*(uint16_t *)(pc + 1)); \
-    pc += 3;                                                    \
-    break;
-#define CASE_u8(_op)                                           \
-  case Opcode::_op:                                            \
-    sb.AppendString(#_op " ").AppendInt(*(uint8_t *)(pc + 1)); \
-    pc += 2;                                                   \
-    break;
-#define CASE_s16(_op)                                          \
-  case Opcode::_op:                                            \
-    sb.AppendString(#_op " ").AppendInt(*(int16_t *)(pc + 1)); \
-    pc += 3;                                                   \
-    break;
 inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
   StringBuilder sb;
   sb.AppendFormat("fuction '%s'@%p, (%d)slots:\n", sfd->name->cstr(), *sfd,
                   sfd->max_stack);
   sb.AppendFormat("  instructions(%llu bytes):\n", sfd->instructions->length());
   uint8_t *pc = sfd->instructions->begin();
+  char buff[32];
   while (pc - sfd->instructions->begin() < sfd->instructions->length()) {
-    sb.AppendFormat("    %03d: ", pc - sfd->instructions->begin());
-    switch ((Opcode)*pc) {
-      CASE_0(NOP);
-      CASE_u16(LOADL);
-      CASE_u16(STOREL);
-      CASE_u16(LOADK);
-      CASE_u16(LOADE);
-      CASE_u16(STOREE);
-      CASE_0(IMPORT);
-      CASE_0(LOAD_THIS);
-      CASE_0(LOAD_PARAMS);
-      CASE_0(COPY);
-      CASE_0(PUSH_NULL);
-      CASE_0(POP);
-      CASE_u8(POPN);
-      CASE_0(ADD);
-      CASE_0(SUB);
-      CASE_0(MUL);
-      CASE_0(IDIV);
-      CASE_0(FDIV);
-      CASE_0(MOD);
-      CASE_0(BAND);
-      CASE_0(BOR);
-      CASE_0(BNOT);
-      CASE_0(BXOR);
-      CASE_0(SHL);
-      CASE_0(SHR);
-      CASE_0(NOT);
-      CASE_0(AND);
-      CASE_0(OR);
-      CASE_0(LT);
-      CASE_0(GT);
-      CASE_0(LE);
-      CASE_0(GE);
-      CASE_0(EQ);
-      CASE_0(NEQ);
-      CASE_0(GET_M);
-      CASE_0(SET_M);
-      CASE_0(GET_I);
-      CASE_0(SET_I);
-      CASE_0(NEG);
-      CASE_0(ACT);
-      CASE_u16(CALL);
-      CASE_u16(THIS_CALL);
-      CASE_0(RET);
-      CASE_0(RETNULL);
-      CASE_s16(JMP);
-      CASE_s16(JMP_T);
-      CASE_s16(JMP_F);
-      CASE_u16(CLOSURE);
-      CASE_0(CLOSURE_SELF);
-
-      default:
-        ASSERT(0);
-    }
-    sb.AppendString("\n");
+    pc += read_bytecode(pc, buff);
+    sb.AppendFormat("    %03d: %s\n", pc - sfd->instructions->begin(), buff);
+    // sb.AppendString("\n");
   }
   sb.AppendFormat("  locals(%llu):\n", sfd->vars->length());
   for (size_t i = 0; i < sfd->vars->length(); i++) {
-    sb.AppendFormat("    %llu %s\n", i,
-                    VarData::cast(sfd->vars->get(i))->name->cstr());
+    sb.AppendFormat("    %llu %s:%d\n", i,
+                    VarData::cast(sfd->vars->get(i))->name->cstr(),
+                    VarData::cast(sfd->vars->get(i))->slot_id);
   }
   sb.AppendFormat("  consts(%llu):\n", sfd->kpool->length());
   for (size_t i = 0; i < sfd->kpool->length(); i++) {

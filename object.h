@@ -5,7 +5,9 @@
 #pragma once
 #pragma warning(push)
 #pragma warning(disable : 4200)  // 0大小数组
+#define _CRT_SECURE_NO_WARNINGS
 
+#include <cstdio>
 #include <utility>
 
 #include "heap.h"
@@ -195,6 +197,7 @@ class HeapObject : public Object {
 
  public:
   const ObjectInterface *get_interface() { return m_interface; }
+
  public:
   DEF_CAST(HeapObject)
   OBJECT_DEF(HeapObject);
@@ -702,7 +705,7 @@ class Struct : public HeapObject {
 class VarData : public Struct {
  public:
   String *name;
-
+  uint16_t slot_id;
  private:
   DECL_TRACEREF(VarData, _M(name));
 
@@ -772,9 +775,9 @@ class FunctionData : public Struct {
 #undef DECL_TRACEREF
 #undef _M
 
+void debug_print(FILE *f, Object *obj);
 
-
-// ----Object Implement--------
+// ----Object Inline Implement--------
 #define IS_HEAPOBJECT(_t) \
   (IsHeapObject() &&      \
    HeapObject::cast(this)->m_heapobj_type == HeapObjectType::_t)

@@ -1,36 +1,75 @@
-fuction '#global'@0000025FE4EF3320, (5)slots:
-  instructions(55 bytes):
-    000: LOADK 0
-    003: IMPORT
-    004: LOADL 0
-    007: LOADK 1
-    010: LOADK 2
-    013: THIS_CALL 1
-    016: POP
-    017: LOADK 3
-    020: LOADL 2
-    023: LOADK 4
-    026: LT
-    027: JMP_F 25
-    030: LOADL 0
-    033: LOADK 1
-    036: LOADL 2
-    039: THIS_CALL 1
-    042: POP
-    043: LOADK 5
-    046: STOREL 2
-    049: JMP -29
-    052: POPN 1
-    054: RETNULL
-  locals(2):
-    0 console
-    1 i
-  consts(6):
-    0 'console'
-    1 'print'
-    2 'abc'
-    3 0
-    4 100
-    5 1
+fuction '#global'@000002431DAACF90, (7)slots:
+  instructions(78 bytes):
+    003: LOADK 0
+    006: LOADK 1
+    009: LOADK 2
+    012: LOADL 2
+    015: LOADK 1
+    016: LE
+    019: JMP_F 59
+    022: LOADK 2
+    025: LOADL 3
+    028: LOADK 3
+    029: LE
+    032: JMP_F 31
+    035: CLOSURE 0
+    038: LOADL 0
+    041: LOADL 3
+    044: CALL 2
+    047: STOREL 0
+    050: LOADL 3
+    053: LOADK 2
+    054: ADD
+    057: STOREL 3
+    060: JMP -35
+    062: POPN 1
+    065: LOADL 2
+    068: LOADK 2
+    069: ADD
+    072: STOREL 2
+    075: JMP -63
+    077: POPN 1
+    078: RETNULL
+  locals(4):
+    0 x:0
+    1 y:1
+    2 i:2
+    3 i:3
+  consts(4):
+    0 0
+    1 2
+    2 1
+    3 10
+  inner func(1):
+    0 'add'@000002431DAAD030
+
+fuction 'add'@000002431DAAD030, (7)slots:
+  instructions(46 bytes):
+    003: LOADL 0
+    006: LOADL 1
+    009: LOADL 0
+    012: LOADL 1
+    013: ADD
+    016: STOREL 0
+    019: LOADL 2
+    022: LOADL 0
+    023: MUL
+    026: LOADL 2
+    029: LOADL 3
+    030: FDIV
+    033: LOADL 1
+    034: FDIV
+    035: BAND
+    038: STOREL 1
+    041: LOADL 2
+    044: LOADL 3
+    045: ADD
+    046: RET
+  locals(4):
+    0 a:0
+    1 b:1
+    2 c:2
+    3 d:3
+  consts(0):
   inner func(0):
 

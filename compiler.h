@@ -644,7 +644,10 @@ class Parser {
         NEED_CHECK(TokenType::SYMBOL)
         p->param.push(Handle<String>::cast(TK.v));
         CONSUME;
-        if (TK.t != TokenType::COMMA) break;
+        if (TK.t != TokenType::COMMA) {
+          REQUIRE(TokenType::BK_SR);  //)
+          break;
+        }
         CONSUME;
       }
     } else if (TK.t == TokenType::BK_SR) {
@@ -679,6 +682,9 @@ class Parser {
 };
 struct VarCtx {
   Handle<String> name;  //空Handle代表作用域
+  uint16_t slot_id;     // slot编号
+                     //注意！因为使用了空Handle占位作为作用域标识
+                     // slot_id不一定等于其所在List内的编号
 };
 struct ExtVarCtx {
   Handle<String> name;
@@ -759,6 +765,7 @@ class CodeGenerator : public ASTVisitor {
     for (size_t i = 0; i < ctx->allvar.size(); i++) {
       Handle<VarData> vd = Factory::NewVarData();
       vd->name = *ctx->allvar[i].name;
+      vd->slot_id = ctx->allvar[i].slot_id;
       sfd->vars->set(i, *vd);
     }
     sfd->extvars = *Factory::NewFixedArray(0);
@@ -813,16 +820,14 @@ class CodeGenerator : public ASTVisitor {
   void AppendS16(int16_t v) { AppendU16(*(uint16_t *)&v); }
   void AppendOp(Opcode op) {
     AppendU8((uint8_t)op);
-    printf("append:%d %lld\n", op, ctx->top);
+    // printf("append:%d %lld\n", op, ctx->top);
   }
   void push() {
     ++ctx->top;
     if (ctx->top > ctx->max_stack) ctx->max_stack = ctx->top;
   }
-  void pop(uint16_t size = 1) {
-    ctx->top -= size; 
-  }
-  void EnterScope() { ctx->var.push(VarCtx{Handle<String>()}); }
+  void pop(uint16_t size = 1) { ctx->top -= size; }
+  void EnterScope() { ctx->var.push(VarCtx{Handle<String>(), invalid_pos}); }
   void LeaveScope() {
     uint32_t cnt = 0;
     while (!ctx->var.back().name.empty()) {
@@ -860,9 +865,10 @@ class CodeGenerator : public ASTVisitor {
     uint16_t pos = (uint16_t)ctx->var.size();
     VarCtx vc;
     vc.name = name;
+    vc.slot_id = ctx->top;
     ctx->var.push(vc);
     ctx->allvar.push(vc);
-    //push(); -- 不需要push，只要不pop就好了
+    // push(); -- 不需要push，只要不pop就好了
     return pos;
   }
   uint16_t FindVar(Handle<String> name) {
@@ -872,7 +878,7 @@ class CodeGenerator : public ASTVisitor {
       --i;
       if (ctx->var[i].name.empty()) continue;  // Scope标识，跳过
       if (String::Equal(*name, *ctx->var[i].name)) {
-        return (uint16_t)i;
+        return ctx->var[i].slot_id;
       }
     } while (i != 0);  //倒序查找最近的变量
     // for (size_t i = ctx->var.size() - 1; i >= 0; i--)  -- 错误->i为无符号类型

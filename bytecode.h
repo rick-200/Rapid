@@ -1,4 +1,7 @@
 #pragma once
+#define _CRT_SECURE_NO_WARNINGS
+#include <cstdio>
+
 #include "handle.h"
 #include "preprocessors.h"
 namespace rapid {
@@ -25,7 +28,7 @@ enum class Opcode : uint8_t {
   // 不需要此指令，因为变量就保存在计算栈上，无需操作
   PUSH_NULL,  //用于定义变量时将初始值null push到栈上
   POP,
-  POPN,//pop n个，u8
+  POPN,  // pop n个，u8
 
   ADD,
   SUB,
@@ -251,6 +254,79 @@ struct Token {
   int row, col;
   Handle<Object> v;
 };
+#define CASE_0(_t)            \
+  case Opcode::_t:            \
+    sprintf_s(pbuf, 32, #_t); \
+    return 1;
+#define CASE_u8(_t)                                      \
+  case Opcode::_t:                                       \
+    sprintf_s(pbuf, 32, #_t " %d", *(uint8_t*)(pc + 1)); \
+    return 2;
+#define CASE_u16(_t)                                      \
+  case Opcode::_t:                                        \
+    sprintf_s(pbuf, 32, #_t " %d", *(uint16_t*)(pc + 1)); \
+    return 3;
+#define CASE_s16(_t)                                     \
+  case Opcode::_t:                                       \
+    sprintf_s(pbuf, 32, #_t " %d", *(int16_t*)(pc + 1)); \
+    return 3;
+
+inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
+  switch ((Opcode)*pc) {
+    CASE_0(NOP);
+    CASE_u16(LOADL);
+    CASE_u16(STOREL);
+    CASE_u16(LOADK);
+    CASE_u16(LOADE);
+    CASE_u16(STOREE);
+    CASE_0(IMPORT);
+    CASE_0(LOAD_THIS);
+    CASE_0(LOAD_PARAMS);
+    CASE_0(COPY);
+    CASE_0(PUSH_NULL);
+    CASE_0(POP);
+    CASE_u8(POPN);
+    CASE_0(ADD);
+    CASE_0(SUB);
+    CASE_0(MUL);
+    CASE_0(IDIV);
+    CASE_0(FDIV);
+    CASE_0(MOD);
+    CASE_0(BAND);
+    CASE_0(BOR);
+    CASE_0(BNOT);
+    CASE_0(BXOR);
+    CASE_0(SHL);
+    CASE_0(SHR);
+    CASE_0(NOT);
+    CASE_0(AND);
+    CASE_0(OR);
+    CASE_0(LT);
+    CASE_0(GT);
+    CASE_0(LE);
+    CASE_0(GE);
+    CASE_0(EQ);
+    CASE_0(NEQ);
+    CASE_0(GET_M);
+    CASE_0(SET_M);
+    CASE_0(GET_I);
+    CASE_0(SET_I);
+    CASE_0(NEG);
+    CASE_0(ACT);
+    CASE_u16(CALL);
+    CASE_u16(THIS_CALL);
+    CASE_0(RET);
+    CASE_0(RETNULL);
+    CASE_s16(JMP);
+    CASE_s16(JMP_T);
+    CASE_s16(JMP_F);
+    CASE_u16(CLOSURE);
+    CASE_0(CLOSURE_SELF);
+
+    default:
+      ASSERT(0);
+  }
+}
 
 }  // namespace internal
 }  // namespace rapid

@@ -215,6 +215,9 @@ class ExecuterImpl : public Executer {
   List<CallInfo> list_ci;
   Exception *err;
   Object ***ptr_top;  //指向当前Execute栈上的top指针，用于在gc时确定边界
+#ifdef _DEBUG
+  FILE *dbg_f;
+#endif
 
  private:
   //若fd不为null，填充FullCall，且sfd需等于fd->shared_data
@@ -230,7 +233,8 @@ class ExecuterImpl : public Executer {
       ci->sfd = sfd;
     }
     ci->base = base;
-    ci->top = AddOffset(base, sfd->param_cnt);
+    ci->top = AddOffset(
+        base, sfd->param_cnt - 1 /*top为栈顶位置，栈长(top-base+1)，应减去1*/);
     ci->pc = sfd->instructions->begin();
   }
 
@@ -247,6 +251,38 @@ class ExecuterImpl : public Executer {
     new_ci.this_object = this_obj;
     list_ci.push(new_ci);
   }
+#ifdef _DEBUG
+
+  void dbg_print_stack() {
+    fprintf(dbg_f, "----------stack---------\n");
+    if (ptr_top != nullptr)
+      list_ci.back().top = m_stack.GetOffset(*ptr_top);  //写回
+    for (const auto &ci : list_ci) {
+      fprintf(dbg_f, "CallInfo: ");
+      switch (ci.t) {
+        case CallType::FullCall:
+          fprintf(dbg_f, "FullCall<%p:'%s'@%p>\n", ci.fd,
+                  ci.fd->shared_data->name->cstr(), ci.fd->shared_data);
+          break;
+        case CallType::StatelessCall:
+          fprintf(dbg_f, "StatelessCall<'%s'@%p>\n", ci.sfd->name->cstr(),
+                  ci.sfd);
+          break;
+        case CallType::NativeCall:
+          fprintf(dbg_f, "NativeCall\n");
+          break;
+      }
+
+      for (size_t i = static_cast<size_t>(ci.base);
+           i <= static_cast<size_t>(ci.top); i++) {
+        fprintf(dbg_f, "  [%llu:%llu] ", i, i - static_cast<size_t>(ci.base));
+        debug_print(dbg_f, m_stack.GetRawPtr(static_cast<StackOffset>(i))[0]);
+        fprintf(dbg_f, "\n");
+      }
+    }
+    fprintf(dbg_f, "------------------------\n");
+  }
+#endif  //  _DEBUG
 
   //执行最顶上的CallInfo，直到CallType为NativeCall
   void Execute() {
@@ -254,6 +290,7 @@ class ExecuterImpl : public Executer {
     CallInfo *ci = &list_ci.back();
     byte *pc = ci->pc;
     // top指向栈顶元素（不是栈顶+1）
+    // top还用于标识gc范围，应在每条指令结束后再调整top指针
     Object **top = m_stack.GetRawPtr(ci->top);
     ptr_top = &top;  //更新ptr_top，用于gc
     Object **base = m_stack.GetRawPtr(ci->base);
@@ -272,6 +309,11 @@ class ExecuterImpl : public Executer {
     }
 
     while (true) {
+#ifdef _DEBUG
+      char buff[32];
+      read_bytecode(pc, buff);
+      fprintf(dbg_f, "---->exec: %s\n", buff);
+#endif  //  _DEBUG
       Opcode op = (Opcode)*pc;
       ++pc;
       switch (op) {
@@ -302,6 +344,10 @@ class ExecuterImpl : public Executer {
           break;
         case Opcode::POP:
           --top;
+          break;
+        case Opcode::POPN:
+          top -= *(uint8_t *)pc;
+          ++pc;
           break;
         case Opcode::ADD:
           EXEC_BINOP(Add);
@@ -370,27 +416,28 @@ class ExecuterImpl : public Executer {
           break;
 
         case Opcode::GET_M: {
-          String *name = String::cast(*top);
-          --top;
-          Object *obj = *top;
+          String *name = String::cast(top[0]);
+          Object *obj = top[-1];
           if (obj->IsHeapObject()) {
-            *top =
+            top[-1] =
                 HeapObject::cast(obj)->get_interface()->get_member(obj, name);
           } else {
             VERIFY(0);  // TODO:值类型的GetMember
           }
+          --top;
           break;
         }
 
         case Opcode::GET_I: {
-          Object *idx = *top;
-          --top;
-          Object *obj = *top;
+          Object *idx = top[0];
+          Object *obj = top[-1];
           if (obj->IsHeapObject()) {
-            *top = HeapObject::cast(obj)->get_interface()->get_index(obj, idx);
+            top[-1] =
+                HeapObject::cast(obj)->get_interface()->get_index(obj, idx);
           } else {
-            VERIFY(0);  // TODO:值类型的GetMember
+            VERIFY(0);  // TODO:值类型的GetIndex
           }
+          --top;
           break;
         }
         case Opcode::SET_M:
@@ -399,14 +446,12 @@ class ExecuterImpl : public Executer {
           break;
 
         case Opcode::JMP:
-          --pc;
-          pc -= *(int16_t *)pc;
+          pc += *(int16_t *)pc - 1;  //跳转从JMP指令起始位开始
           break;
         case Opcode::JMP_T:
           if (top[0]->IsTrue()) {
             --top;
-            --pc;
-            pc -= *(int16_t *)pc;  //跳转从JMP指令起始位开始
+            pc += *(int16_t *)pc - 1;  //跳转从JMP指令起始位开始
           } else {
             --top;
             pc += 2;
@@ -415,54 +460,69 @@ class ExecuterImpl : public Executer {
         case Opcode::JMP_F:
           if (top[0]->IsFalse()) {
             --top;
-            --pc;
-            pc -= *(int16_t *)pc;  //跳转从JMP指令起始位开始
+            pc += *(int16_t *)pc - 1;  //跳转从JMP指令起始位开始
           } else {
             --top;
             pc += 2;
           }
           break;
-        case Opcode::CALL: {  // func p1 p2 p3 [<- top]
+        case Opcode::CALL:         // func p1 p2 p3 [<- top]
+        case Opcode::THIS_CALL: {  // obj func_name p1 p2 p3 [<- top]
           uint16_t cnt = *(uint16_t *)pc;
           pc += 2;
-          top -= cnt;  //此时top指向要调用的对象，同时此位置也接受返回值
+          Object *this_obj;
+          Object *func;
+          if (op == Opcode::CALL) {
+            this_obj = Heap::NullValue();
+            func = *(top - cnt);
+            top -= cnt;  //此时top指向要调用的对象，同时此位置也接受返回值
+          } else {  // op == Opcode::THIS_CALL
+            ASSERT(op == Opcode::THIS_CALL);
+            this_obj = *(top - cnt - 1);
+            String *name = String::cast(*(top - cnt));
+            if (this_obj->IsHeapObject()) {
+              func = HeapObject::cast(this_obj)->get_interface()->get_member(
+                  this_obj, name);
+            } else {
+              // TODO: 值类型的GetMember
+            }
+            top -= cnt + 1;  //此时top指向要调用的对象，同时此位置也接受返回值
+          }
+
           ASSERT(ci == &list_ci.back());
-          ci->pc = pc;                         //写回
-          ci->base = m_stack.GetOffset(base);  //写回
-          ci->top = m_stack.GetOffset(top);    //写回
+          ci->pc = pc;  //写回
+          // ci->base = m_stack.GetOffset(base);
+          ASSERT(ci->base == m_stack.GetOffset(base));  // base应不变
+          ci->top = m_stack.GetOffset(top);             //写回
           StackOffset off_base = m_stack.GetOffset(base);
           StackOffset off_top = m_stack.GetOffset(top);
           if (top[0]->IsFunctionData()) {
             FunctionData *fd = FunctionData::cast(top[0]);
-            prepare_call(off_top, cnt, Heap::NullValue(), fd, fd->shared_data);
-            goto l_begin;
+            prepare_call(off_top, cnt, this_obj, fd, fd->shared_data);
+            goto l_to_begin;
           } else if (top[0]->IsSharedFunctionData()) {  //无状态调用
             SharedFunctionData *sfd = SharedFunctionData::cast(top[0]);
-            prepare_call(off_top, cnt, Heap::NullValue(), nullptr, sfd);
-            goto l_begin;
+            prepare_call(off_top, cnt, this_obj, nullptr, sfd);
+            goto l_to_begin;
           } else if (top[0]->IsNativeFunction()) {
-            Parameters param(nullptr, top + 1, cnt);
+            Parameters param(this_obj, top + 1, cnt);
             top[0] = NativeFunction::cast(top[0])->call(param);
           } else {
             VERIFY(0);  // TODO
           }
           break;
         }
-        case Opcode::THIS_CALL:
-          VERIFY(0);  // TODO: THIS_CALL
-
-          break;
         case Opcode::RET:
           list_ci.pop();
           m_stack.GetRawPtr(list_ci.back().top)[0] =
               top[0];  //返回值保存至上一层调用的栈顶
-          goto l_begin;
+          goto l_to_begin;
           break;
         case Opcode::RETNULL:
           list_ci.pop();
           m_stack.GetRawPtr(list_ci.back().top)[0] =
               Heap::NullValue();  //返回值保存至上一层调用的栈顶
-          goto l_begin;
+          goto l_to_begin;
           break;
         case Opcode::CLOSURE: {
           FunctionData *fd = *Factory::NewFunctionData();
@@ -484,7 +544,14 @@ class ExecuterImpl : public Executer {
         default:
           ASSERT(0);
       }
+      IF_DEBUG(dbg_print_stack());
     }
+    goto l_return;
+  l_to_begin:
+    ptr_top = nullptr;
+    IF_DEBUG(dbg_print_stack());
+    goto l_begin;
+  l_return:;
   }
 
   // void fill_param(const RawParameters &param, Object **p,
@@ -544,9 +611,13 @@ class ExecuterImpl : public Executer {
  public:
   static ExecuterImpl *Create() {
     ExecuterImpl *p = (ExecuterImpl *)Heap::RawAlloc(sizeof(ExecuterImpl));
+    p->ptr_top = nullptr;
     new (&p->m_stack) ScriptStack();
     new (&p->list_ci) List<CallInfo>();
     p->err = nullptr;
+#ifdef _DEBUG
+    p->dbg_f = fopen("./exec_log.txt", "w");
+#endif  // _DEBUG
     return p;
   }
   static void Destory(Executer *p) {
