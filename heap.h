@@ -18,16 +18,18 @@ class SharedFunctionData;
 class FunctionData;
 class InstructionArray;
 class Exception;
+class NativeObject;
+struct ObjectInterface;
 class Heap : public StaticClass {
-public:
+ public:
   static void *RawAlloc(size_t size);
   static void RawFree(void *p);
 
-public:
+ public:
   static Heap *Create();
   static void Destory(Heap *heap);
 
-public: //以下函数不会调用GC
+ public:  //以下函数不会调用GC
   static String *AllocString(const char *cstr, size_t length);
   static Array *AllocArray();
   static Table *AllocTable();
@@ -43,24 +45,27 @@ public: //以下函数不会调用GC
   static SharedFunctionData *AllocSharedFunctionData();
   static ExternVar *AllocExternVar();
   static FunctionData *AllocFunctionData();
+  static NativeObject *AllocNativeObject(void *data,
+                                         const ObjectInterface *interface);
 
   static uint64_t ObjectCount();
 
-public:
+ public:
   static void DoGC();
 };
 
 class GCTracer {
   uint8_t m_color;
 
-public:
+ public:
   GCTracer(uint8_t color);
   void Trace(HeapObject *p);
   void Trace(Object *p);
-  template <class... TArgs> inline void TraceAll(TArgs... args) {
+  template <class... TArgs>
+  inline void TraceAll(TArgs... args) {
     (Trace(args), ...);
   }
 };
 
-} // namespace internal
-} // namespace rapid
+}  // namespace internal
+}  // namespace rapid

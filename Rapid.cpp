@@ -7,6 +7,7 @@
 #include "ast.h"
 #include "ast_visualizer.h"
 #include "compiler.h"
+#include "console.h"
 #include "engine.h"
 #include "factory.h"
 #include "handle.h"
@@ -117,6 +118,8 @@ void test_compile(Handle<String> code) {
   f = fopen("btc.txt", "w");
   fprintf(f, "%s", VisualizeByteCode(sfd)->cstr());
   fclose(f);
+  Executer::RegisterModule(Factory::NewString("console"),
+                           stdmodule::GetConsoleModule());
   Parameters param(Heap::NullValue(), nullptr, 0);
   Handle<Object> ret = Executer::CallFunction(sfd, param);
 }
@@ -129,7 +132,7 @@ int main() {
   Engine::Init();
   HandleScope hs;
   Handle<String> code = Factory::NewString(buff);
-  
+
   CompilingMemoryZone::PrepareAlloc();
   test_compile(code);
   // HandleScope hs;

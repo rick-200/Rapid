@@ -6,21 +6,19 @@
 #include "object.h"
 namespace rapid {
 namespace internal {
-#define CALL_HEAP_ALLOC(_t, ...)                                               \
-  {                                                                            \
-    _t *__pobj_ = Heap::Alloc##_t(__VA_ARGS__);                                \
-    if (!__pobj_->IsFailure())                                                 \
-      return Handle<_t>(__pobj_);                                              \
-    if (Failure::cast(__pobj_) != Failure::RetryAfterGC)                       \
-      return Handle<_t>(__pobj_);                                              \
-    Heap::DoGC();                                                              \
-    __pobj_ = Heap::Alloc##_t(__VA_ARGS__);                                    \
-    if (__pobj_->IsFailure())                                                  \
-      VERIFY(0);                                                               \
-    return Handle<_t>(__pobj_);                                                \
+#define CALL_HEAP_ALLOC(_t, ...)                           \
+  {                                                        \
+    _t *__pobj_ = Heap::Alloc##_t(__VA_ARGS__);            \
+    if (!__pobj_->IsFailure()) return Handle<_t>(__pobj_); \
+    if (Failure::cast(__pobj_) != Failure::RetryAfterGC)   \
+      return Handle<_t>(__pobj_);                          \
+    Heap::DoGC();                                          \
+    __pobj_ = Heap::Alloc##_t(__VA_ARGS__);                \
+    if (__pobj_->IsFailure()) VERIFY(0);                   \
+    return Handle<_t>(__pobj_);                            \
   }
 class Factory {
-public:
+ public:
   static Handle<Integer> NewInteger(int64_t x) {
     return Handle<Integer>(Integer::FromInt64(x));
   }
@@ -56,8 +54,13 @@ public:
   static Handle<FixedTable> NewFixedTable(size_t size) {
     CALL_HEAP_ALLOC(FixedTable, size);
   }
-  static Handle<Exception>
-  NewException(Handle<String> type, Handle<String> info, Handle<Object> data) {
+  static Handle<NativeObject> NewNativeObject(
+      void *data, const ObjectInterface *interface) {
+    CALL_HEAP_ALLOC(NativeObject, data, interface);
+  }
+  static Handle<Exception> NewException(Handle<String> type,
+                                        Handle<String> info,
+                                        Handle<Object> data) {
     CALL_HEAP_ALLOC(Exception, *type, *info, *data);
   }
   static Handle<Exception> NewException(Handle<String> type,
@@ -67,12 +70,11 @@ public:
   static Handle<Exception> NewException(Handle<String> type) {
     CALL_HEAP_ALLOC(Exception, *type, *type, Heap::NullValue());
   }
-#define DEF_NEW_STRUCT(_t)                                                     \
+#define DEF_NEW_STRUCT(_t) \
   static Handle<_t> New##_t() { CALL_HEAP_ALLOC(_t); }
 
   ITER_STRUCT_DERIVED(DEF_NEW_STRUCT)
+};
 
-}; 
-
-} // namespace internal
-} // namespace rapid
+}  // namespace internal
+}  // namespace rapid

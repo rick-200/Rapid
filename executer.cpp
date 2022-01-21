@@ -213,6 +213,7 @@ DEF_CMP_OP(NotEqual, !=);
 class ExecuterImpl : public Executer {
   ScriptStack m_stack;
   List<CallInfo> list_ci;
+  Table *m_module;
   Exception *err;
   Object ***ptr_top;  //指向当前Execute栈上的top指针，用于在gc时确定边界
 #ifdef _DEBUG
@@ -281,12 +282,15 @@ class ExecuterImpl : public Executer {
       }
     }
     fprintf(dbg_f, "------------------------\n");
+    fflush(dbg_f);
   }
 #endif  //  _DEBUG
 
   //执行最顶上的CallInfo，直到CallType为NativeCall
   void Execute() {
   l_begin:
+    HandleScope hs;
+
     CallInfo *ci = &list_ci.back();
     byte *pc = ci->pc;
     // top指向栈顶元素（不是栈顶+1）
@@ -348,6 +352,29 @@ class ExecuterImpl : public Executer {
         case Opcode::POPN:
           top -= *(uint8_t *)pc;
           ++pc;
+          break;
+        case Opcode::IMPORT:
+          if (m_module->exists(String::cast(top[0]))) {
+            top[0] = m_module->get(String::cast(top[0]));
+          } else {
+            top[0] = Heap::NullValue();
+          }
+          break;
+        case Opcode::MAKE_ARRAY: {
+          Handle<Array> arr = Factory::NewArray();
+          uint16_t cnt = *(uint16_t *)pc;
+          pc += 2;
+          arr->reserve(cnt);
+          for (Object **p = top - cnt + 1; p <= top; p++) {
+            arr->push(*p);
+          }
+          top -= cnt - 1;
+          top[0] = arr.ptr();
+          break;
+        }
+        case Opcode::MAKE_ARRAY_0:
+          top[1] = Factory::NewArray().ptr();
+          ++top;
           break;
         case Opcode::ADD:
           EXEC_BINOP(Add);
@@ -415,35 +442,30 @@ class ExecuterImpl : public Executer {
           EXEC_BINOP(NotEqual)
           break;
 
-        case Opcode::GET_M: {
-          String *name = String::cast(top[0]);
-          Object *obj = top[-1];
-          if (obj->IsHeapObject()) {
-            top[-1] =
-                HeapObject::cast(obj)->get_interface()->get_member(obj, name);
-          } else {
-            VERIFY(0);  // TODO:值类型的GetMember
-          }
+        case Opcode::GET_P:
+          top[-1] = top[-1]->GetProperty(String::cast(top[0]),
+                                         AccessSpecifier::Public);
+          --top;
+          break;
+        case Opcode::SET_P:
+          top[-1]->SetProperty(String::cast(top[0]), top[-2],
+                               AccessSpecifier::Public);
+          --top;
+          break;
+        case Opcode::GET_I: {
+          Parameters param(Heap::NullValue(), top, 1);
+          top[-1] = top[-1]->InvokeMetaFunc(MetaFunctionID::GET_INDEX, param);
           --top;
           break;
         }
 
-        case Opcode::GET_I: {
-          Object *idx = top[0];
-          Object *obj = top[-1];
-          if (obj->IsHeapObject()) {
-            top[-1] =
-                HeapObject::cast(obj)->get_interface()->get_index(obj, idx);
-          } else {
-            VERIFY(0);  // TODO:值类型的GetIndex
-          }
-          --top;
+        case Opcode::SET_I: {
+          Object *p[] = {top[0], top[-2]};
+          Parameters param(Heap::NullValue(), p, 2);
+          top[-2] = top[-1]->InvokeMetaFunc(MetaFunctionID::SET_INDEX, param);
+          top -= 2;
           break;
         }
-        case Opcode::SET_M:
-          break;
-        case Opcode::SET_I:
-          break;
 
         case Opcode::JMP:
           pc += *(int16_t *)pc - 1;  //跳转从JMP指令起始位开始
@@ -470,6 +492,11 @@ class ExecuterImpl : public Executer {
         case Opcode::THIS_CALL: {  // obj func_name p1 p2 p3 [<- top]
           uint16_t cnt = *(uint16_t *)pc;
           pc += 2;
+          ASSERT(ci == &list_ci.back());
+          ci->pc = pc;  //写回pc
+          // ci->base = m_stack.GetOffset(base);
+          ASSERT(ci->base == m_stack.GetOffset(base));  // base应不变
+
           Object *this_obj;
           Object *func;
           if (op == Opcode::CALL) {
@@ -480,20 +507,23 @@ class ExecuterImpl : public Executer {
             ASSERT(op == Opcode::THIS_CALL);
             this_obj = *(top - cnt - 1);
             String *name = String::cast(*(top - cnt));
-            if (this_obj->IsHeapObject()) {
-              func = HeapObject::cast(this_obj)->get_interface()->get_member(
-                  this_obj, name);
-            } else {
-              // TODO: 值类型的GetMember
+            VERIFY(this_obj->IsHeapObject());  // TODO:throw
+            if (true) {
+              Parameters param(this_obj, top - cnt + 1, cnt);
+              //先不改变top，以免参数被gc回收
+              ci->top = m_stack.GetOffset(top);  //写回top
+              Object *ret = this_obj->InvokeMemberFunc(name, param);
+              top -= cnt + 1;
+              top[0] = ret;
+              break;
+            } else {  // TODO: CustomObject的THIS_CALL
+              ASSERT(0);
+              top -= cnt + 1;  //此时top指向要调用的对象，同时此位置也接受返回值
             }
-            top -= cnt + 1;  //此时top指向要调用的对象，同时此位置也接受返回值
           }
 
-          ASSERT(ci == &list_ci.back());
-          ci->pc = pc;  //写回
-          // ci->base = m_stack.GetOffset(base);
-          ASSERT(ci->base == m_stack.GetOffset(base));  // base应不变
-          ci->top = m_stack.GetOffset(top);             //写回
+          ci->top = m_stack.GetOffset(top);  //写回top
+
           StackOffset off_base = m_stack.GetOffset(base);
           StackOffset off_top = m_stack.GetOffset(top);
           if (top[0]->IsFunctionData()) {
@@ -614,6 +644,7 @@ class ExecuterImpl : public Executer {
     p->ptr_top = nullptr;
     new (&p->m_stack) ScriptStack();
     new (&p->list_ci) List<CallInfo>();
+    p->m_module = Factory::NewTable().ptr();
     p->err = nullptr;
 #ifdef _DEBUG
     p->dbg_f = fopen("./exec_log.txt", "w");
@@ -644,6 +675,9 @@ class ExecuterImpl : public Executer {
                               const Parameters &param) {
     return Handle<Object>(CallFunction(*fd, fd->shared_data, param));
   }
+  void RegisterModule(Handle<String> name, Handle<Object> md) {
+    m_module->set(*name, *md);
+  }
 };
 
 Executer *Executer::Create() { return ExecuterImpl::Create(); }
@@ -668,6 +702,9 @@ Handle<Object> Executer::CallFunction(Handle<SharedFunctionData> sfd,
 Handle<Object> Executer::CallFunction(Handle<FunctionData> fd,
                                       const Parameters &param) {
   return CALL_EXECUTER_IMPL(CallFunction, fd, param);
+}
+void Executer::RegisterModule(Handle<String> name, Handle<Object> md) {
+  return CALL_EXECUTER_IMPL(RegisterModule, name, md);
 }
 }  // namespace internal
 }  // namespace rapid

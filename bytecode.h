@@ -30,6 +30,9 @@ enum class Opcode : uint8_t {
   POP,
   POPN,  // pop n¸ö£¬u8
 
+  MAKE_ARRAY,  // u16
+  MAKE_ARRAY_0,  // 0
+
   ADD,
   SUB,
   MUL,
@@ -55,9 +58,9 @@ enum class Opcode : uint8_t {
   EQ,   //==
   NEQ,  //!=
 
-  GET_M,  // obj name
+  GET_P,  // obj name
   GET_I,  // obj index
-  SET_M,  // value obj name
+  SET_P,  // value obj name
   SET_I,  // value obj index
 
   JMP,
@@ -279,6 +282,8 @@ inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
     CASE_u16(LOADK);
     CASE_u16(LOADE);
     CASE_u16(STOREE);
+    CASE_u16(MAKE_ARRAY);
+    CASE_0(MAKE_ARRAY_0);
     CASE_0(IMPORT);
     CASE_0(LOAD_THIS);
     CASE_0(LOAD_PARAMS);
@@ -307,8 +312,8 @@ inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
     CASE_0(GE);
     CASE_0(EQ);
     CASE_0(NEQ);
-    CASE_0(GET_M);
-    CASE_0(SET_M);
+    CASE_0(GET_P);
+    CASE_0(SET_P);
     CASE_0(GET_I);
     CASE_0(SET_I);
     CASE_0(NEG);
@@ -326,6 +331,7 @@ inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
     default:
       ASSERT(0);
   }
+  return -1;
 }
 
 }  // namespace internal

@@ -1,10 +1,9 @@
+var console=import("console");
 func add(a,b){
     return a+b;
 }
-var x=0,y=2;
-for(var i=1;i<=2;i+=1){
-    for(var i=1;i<=10;i+=1){
-        x = add(x,i);
-    }
+var arr = [123,456,add(123,456)];
+arr.push(321);
+for(var i=0;i<arr.length;i+=1){
+    console.print(arr[i]);
 }
-

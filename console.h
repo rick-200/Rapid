@@ -4,7 +4,7 @@
 namespace rapid {
 namespace internal {
 namespace stdmodule {
-Handle<Object> RegisterConsole();
+Handle<Object> GetConsoleModule();
 }
 }  // namespace internal
 }  // namespace rapid

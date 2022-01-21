@@ -9,18 +9,10 @@
 #include "global.h"
 #include "handle.h"
 #include "object.h"
+#include "util.h"
 namespace rapid {
 namespace internal {
 
-constexpr uint64_t hash_string(const char *ps, size_t len) {
-  uint64_t ret = 14695981039346656037ULL;
-  size_t step = (len >> 8) + 1; //采样<=256个
-  for (size_t i = 0; i < len; i += step) {
-    ret ^= ps[i];
-    ret *= 1099511628211ULL;
-  }
-  return ret;
-}
 class HeapImpl : public Heap {
   size_t m_usage;
   uint8_t m_color;
@@ -30,7 +22,7 @@ class HeapImpl : public Heap {
   } m_objs, m_roots;
   uint64_t m_object_count;
 
-public:
+ public:
   static void *RawAlloc(size_t size) {
     void *p = malloc(size);
     DBG_LOG("alloc %llu: %p\n", size, p);
@@ -39,7 +31,8 @@ public:
   static void RawFree(void *p) { free(p); }
 
   //用于为VS的堆分析提供类型参数
-  template <class T> __declspec(allocator) T *AllocObject(size_t size) {
+  template <class T>
+  __declspec(allocator) T *AllocObject(size_t size) {
     static_assert(std::is_base_of_v<Object, T>, "");
     return (T *)RawAlloc(size);
   }
@@ -117,17 +110,18 @@ public:
     // TODO
   }
 
-#define ALLOC_HEAPOBJECT(_p, _t)                                               \
-  static_assert(std::is_same_v<decltype(_p), _t *>,                            \
-                "ALLOC_HEAPOBJECT type not match");                            \
-  _p->m_heapobj_type = HeapObjectType::_t;                                     \
-  _p->m_interface = &_t::Interface;                                            \
+#define ALLOC_HEAPOBJECT(_p, _t)                    \
+  static_assert(std::is_same_v<decltype(_p), _t *>, \
+                "ALLOC_HEAPOBJECT type not match"); \
+  _p->m_heapobj_type = HeapObjectType::_t;          \
+  _p->m_interface = &_t::Interface;                 \
   Register(_p);
 
   String *AllocString(const char *cstr, size_t length) {
     String *s = (String *)AllocObject<String>(sizeof(String) + length + 1);
     s->m_length = length;
     s->m_hash = hash_string(cstr, length);
+    s->m_cached = false;
     memcpy(s->m_data, cstr, length);
     s->m_data[length] = '\0';
     ALLOC_HEAPOBJECT(s, String);
@@ -151,8 +145,7 @@ public:
         sizeof(FixedArray) + sizeof(Object *) * length);
     p->m_length = length;
     Object *null_v = NullValue();
-    for (size_t i = 0; i < length; i++)
-      p->m_data[i] = null_v;
+    for (size_t i = 0; i < length; i++) p->m_data[i] = null_v;
     ALLOC_HEAPOBJECT(p, FixedArray);
     return p;
   }
@@ -166,12 +159,21 @@ public:
   }
   FixedTable *AllocFixedTable(size_t size) {
     FixedTable *p = (FixedTable *)AllocObject<FixedTable>(
-        sizeof(FixedTable) + sizeof(FixedTable::Node) * size);
+        sizeof(FixedTable) + sizeof(TableNode) * size);
     p->m_size = size;
     p->m_used = 0;
     p->m_pfree = p->m_data;
-    memset(p->m_data, 0, sizeof(FixedTable::Node) * size);
+    memset(p->m_data, 0, sizeof(TableNode) * size);
     ALLOC_HEAPOBJECT(p, FixedTable);
+    return p;
+  }
+  NativeObject *AllocNativeObject(void *data,
+                                  const ObjectInterface *interface) {
+    NativeObject *p =
+        (NativeObject *)AllocObject<NativeObject>(sizeof(NativeObject));
+    ALLOC_HEAPOBJECT(p, NativeObject);  //此处也会写入m_interface，放前面
+    p->m_interface = interface;
+    p->m_data = data;
     return p;
   }
   Exception *AllocExpection(String *type, String *info, Object *data) {
@@ -185,10 +187,10 @@ public:
   Object *NullValue() { return this->m_null; }
   Object *TrueValue() { return this->m_true; }
   Object *FalseValue() { return this->m_false; }
-#define ALLOC_STRUCT_IMPL(_t)                                                  \
-  _t *p = (_t *)AllocObject<_t>(sizeof(_t));                                   \
-  memset(p, 0, sizeof(_t));                                                    \
-  ALLOC_HEAPOBJECT(p, _t);                                                     \
+#define ALLOC_STRUCT_IMPL(_t)                \
+  _t *p = (_t *)AllocObject<_t>(sizeof(_t)); \
+  memset(p, 0, sizeof(_t));                  \
+  ALLOC_HEAPOBJECT(p, _t);                   \
   return p;
   VarData *AllocVarData() { ALLOC_STRUCT_IMPL(VarData); }
   ExternVarData *AllocExternVarData() { ALLOC_STRUCT_IMPL(ExternVarData); }
@@ -199,7 +201,7 @@ public:
   FunctionData *AllocFunctionData() { ALLOC_STRUCT_IMPL(FunctionData); }
   uint64_t ObjectCount() { return this->m_object_count; }
   void DoGC() {
-    return;//NO_GC
+    return;  // NO_GC
     DBG_LOG("begin gc\n");
     this->m_color = (this->m_color + 1) & 1;
     GCTracer gct(this->m_color);
@@ -274,22 +276,23 @@ ExternVar *Heap::AllocExternVar() { return CALL_HEAP_IMPL(AllocExternVar); }
 FunctionData *Heap::AllocFunctionData() {
   return CALL_HEAP_IMPL(AllocFunctionData);
 }
+NativeObject *Heap::AllocNativeObject(void *data,
+                                      const ObjectInterface *interface) {
+  return CALL_HEAP_IMPL(AllocNativeObject, data, interface);
+}
 uint64_t Heap::ObjectCount() { return CALL_HEAP_IMPL(ObjectCount); }
 void Heap::DoGC() { return CALL_HEAP_IMPL(DoGC); }
 
 GCTracer::GCTracer(uint8_t color) : m_color(color) {}
 
 void GCTracer::Trace(HeapObject *p) {
-  if (p == nullptr)
-    return;
+  if (p == nullptr) return;
   p->m_gctag = m_color;
   p->m_interface->trace_ref(p, this);
 }
 void GCTracer::Trace(Object *p) {
-  if (p == nullptr)
-    return;
-  if (p->IsHeapObject())
-    Trace(HeapObject::cast(p));
+  if (p == nullptr) return;
+  if (p->IsHeapObject()) Trace(HeapObject::cast(p));
 }
-} // namespace internal
-} // namespace rapid
+}  // namespace internal
+}  // namespace rapid

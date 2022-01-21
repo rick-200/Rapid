@@ -336,6 +336,26 @@ class Parser {
         CONSUME;
         return AllocImportExpr(ALLOC_PARAM);
       }
+      case TokenType::BK_ML: {//[
+        CONSUME;
+        ArrayExpr *ae = AllocArrayExpr(ALLOC_PARAM);
+        if (TK.t == TokenType::BK_MR) {
+          return ae;
+        }
+        while (true) {
+          Expression *exp = ParseExpression();
+          CHECK_OK(exp);
+          ae->params.push(exp);
+          if (TK.t == TokenType::COMMA) {
+            CONSUME;
+          }//无else，允许最后有一个多余的逗号
+          if (TK.t == TokenType::BK_MR) {
+            CONSUME;
+            break;
+          }
+        }
+        return ae;
+      }
     }
     StringBuilder sb;
     const char *now_t = tokentype_tostr(TK.t);
@@ -935,27 +955,28 @@ class CodeGenerator : public ASTVisitor {
  private:
   void VisitWithScope(AstNode *node);
   // 通过 ASTVisitor 继承
-  virtual void VisitExpressionStat(ExpressionStat *node);
-  virtual void VisitLiteral(Literal *node);
-  virtual void VisitBlockStat(BlockStat *node);
-  virtual void VisitIfStat(IfStat *node);
-  virtual void VisitLoopStat(LoopStat *node);
-  virtual void VisitVarDecl(VarDecl *node);
-  virtual void VisitFuncDecl(FuncDecl *node);
-  virtual void VisitReturnStat(ReturnStat *node);
-  virtual void VisitBreakStat(BreakStat *node);
-  virtual void VisitContinueStat(ContinueStat *node);
-  virtual void VisitVarExpr(VarExpr *node);
-  virtual void VisitMemberExpr(MemberExpr *node);
-  virtual void VisitIndexExpr(IndexExpr *node);
-  virtual void VisitUnaryExpr(UnaryExpr *node);
-  virtual void VisitBinaryExpr(BinaryExpr *node);
-  virtual void VisitAssignExpr(AssignExpr *node);
-  virtual void VisitCallExpr(CallExpr *node);
+  virtual void VisitExpressionStat(ExpressionStat *node) override;
+  virtual void VisitLiteral(Literal *node) override;
+  virtual void VisitBlockStat(BlockStat *node) override;
+  virtual void VisitIfStat(IfStat *node) override;
+  virtual void VisitLoopStat(LoopStat *node) override;
+  virtual void VisitVarDecl(VarDecl *node) override;
+  virtual void VisitFuncDecl(FuncDecl *node) override;
+  virtual void VisitReturnStat(ReturnStat *node) override;
+  virtual void VisitBreakStat(BreakStat *node) override;
+  virtual void VisitContinueStat(ContinueStat *node) override;
+  virtual void VisitVarExpr(VarExpr *node) override;
+  virtual void VisitMemberExpr(MemberExpr *node) override;
+  virtual void VisitIndexExpr(IndexExpr *node) override;
+  virtual void VisitUnaryExpr(UnaryExpr *node) override;
+  virtual void VisitBinaryExpr(BinaryExpr *node) override;
+  virtual void VisitAssignExpr(AssignExpr *node) override;
+  virtual void VisitCallExpr(CallExpr *node) override;
   void VisitAssignExpr(AssignExpr *p, bool from_expr_stat);
-  virtual void VisitThisExpr(ThisExpr *node);
-  virtual void VisitParamsExpr(ParamsExpr *node);
-  virtual void VisitImportExpr(ImportExpr *node);
+  virtual void VisitThisExpr(ThisExpr *node) override;
+  virtual void VisitParamsExpr(ParamsExpr *node) override;
+  virtual void VisitImportExpr(ImportExpr *node) override;
+  virtual void VisitArrayExpr(ArrayExpr *node) override;
 };
 
 }  // namespace internal

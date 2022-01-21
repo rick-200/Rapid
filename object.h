@@ -13,6 +13,7 @@
 #include "heap.h"
 #include "preprocessors.h"
 #include "type.h"
+#include "util.h"
 namespace rapid {
 namespace internal {
 /*
@@ -47,6 +48,7 @@ namespace internal {
   V(InstructionArray)                 \
   V(Exception)                        \
   V(NativeFunction)                   \
+  V(NativeObject)                     \
   V(FunctionData)                     \
   V(VarData)                          \
   V(ExternVarData)                    \
@@ -75,14 +77,15 @@ typedef intptr_t Address;
 
 //注意必须在定义的最后应用OBJECT_DEF(type)
 //否则Interface中找不到当前类的函数
-#define OBJECT_DEF(_t)                           \
-  _t() = delete;                                 \
-  _t(_t &) = delete;                             \
-  friend class Heap;                             \
-  friend class HeapImpl;                         \
-  friend class GCTracer;                         \
-  static constexpr ObjectInterface Interface = { \
-      get_member, set_member, get_index, set_index, trace_ref};
+#define OBJECT_DEF(_t)                                                    \
+  _t() = delete;                                                          \
+  _t(_t &) = delete;                                                      \
+  friend class Heap;                                                      \
+  friend class HeapImpl;                                                  \
+  friend class GCTracer;                                                  \
+  static constexpr ObjectInterface Interface = {                          \
+      get_property, set_property, invoke_memberfunc, invoke_metafunction, \
+      trace_ref};
 
 enum class HeapObjectType {
   UNKNOWN_TYPE,
@@ -96,6 +99,7 @@ enum class HeapObjectType {
   SpecialValue,
   InstructionArray,
   Exception,
+  NativeObject,
   NativeFunction,
   Flag_Struct_Start,
   Struct,
@@ -124,11 +128,24 @@ class Object {
   DEF_ISXXX(Struct);
 
  protected:
-  static Object *get_member(Object *obj, String *name);
-  static Object *set_member(Object *obj, String *name, Object *val);
-  static Object *get_index(Object *obj, Object *idx);
-  static Object *set_index(Object *obj, Object *idx, Object *val);
+  static Object *get_property(Object *obj, String *name, AccessSpecifier spec);
+  static Object *set_property(Object *obj, String *name, Object *val,
+                              AccessSpecifier spec);
+  // static Object *get_metafunction(Object *obj, MetaFunctionID id);
+  // static Object *get_memberfunc(Object *obj, String *name,
+  // AccessSpecifier spec);
+  static Object *invoke_metafunction(Object *obj, MetaFunctionID id,
+                                     const Parameters &params);
+  static Object *invoke_memberfunc(Object *obj, String *name,
+                                   const Parameters &params);
   static void trace_ref(Object *obj, GCTracer *gct);
+
+ public:
+  inline Object *GetProperty(String *name, AccessSpecifier spec);
+  inline Object *SetProperty(String *name, Object *val, AccessSpecifier spec);
+  // inline Object *GetMemberFunc(String *name, AccessSpecifier spec);
+  inline Object *InvokeMemberFunc(String *name, const Parameters &params);
+  inline Object *InvokeMetaFunc(MetaFunctionID id, const Parameters &params);
 
  public:
   OBJECT_DEF(Object);
@@ -176,6 +193,9 @@ class Failure : public Object {
   static constexpr Failure *NoEnoughSpace = FAILURE_VAL(5);
   static constexpr Failure *NotImplemented = FAILURE_VAL(6);
   static constexpr Failure *Expection = FAILURE_VAL(7);  //运行时错误
+  static constexpr Failure *PropertyNotFound = FAILURE_VAL(8);
+  static constexpr Failure *PropertyAccessDenied = FAILURE_VAL(9);
+  static constexpr Failure *InvalidParameters = FAILURE_VAL(10);
   uint32_t code() { return (uint32_t)(reinterpret_cast<Address>(this) >> 2); }
   DEF_CAST(Failure)
   OBJECT_DEF(Failure);
@@ -234,20 +254,22 @@ class NativeFunction : public HeapObject {
 };
 
 //包裹一个本地对象
-// TODO
 class NativeObject : public HeapObject {
-  void *m_p;
   void *m_data;
-  void *m_gc_callback;
-  ObjectInterface *custom_interface;
 
  public:
+  void *get_data() { return m_data; }
+
+ public:
+  OBJECT_DEF(NativeObject);
+  DEF_CAST(NativeObject);
 };
 
 //字符串对象
 class String : public HeapObject {
   size_t m_length;
   uint64_t m_hash;
+  bool m_cached;
   char m_data[];
 
  public:
@@ -257,10 +279,19 @@ class String : public HeapObject {
 
   static bool Equal(String *s1, String *s2) {
     if (s1 == s2) return true;
+    if (s1->m_cached && s2->m_cached) return false;
     if (s1->m_hash != s2->m_hash || s1->m_length != s2->m_length) return false;
     size_t len = s1->m_length;
     for (size_t i = 0; i < len; i++) {
       if (s1->m_data[i] != s2->m_data[i]) return false;
+    }
+    return true;
+  }
+  static bool Equal(String *s1, const CStringWrap &s2) {
+    if (s1->m_hash != s2.hash || s1->m_length != s2.length) return false;
+    size_t len = s1->m_length;
+    for (size_t i = 0; i < len; i++) {
+      if (s1->m_data[i] != s2.s[i]) return false;
     }
     return true;
   }
@@ -308,35 +339,54 @@ class FixedArray : public HeapObject {
   DEF_CAST(FixedArray)
 };
 
+struct TableNode {
+  String *key;
+  Object *val;
+  TableNode *next;
+};
+class TableIterator {
+  const TableNode *m_p, *m_end;
+
+ private:
+  friend class FixedTable;
+
+ private:
+  TableIterator(const TableNode *begin, const TableNode *end)
+      : m_p(begin), m_end(end) {}
+
+ public:
+  TableIterator(const TableIterator &) = default;
+  bool is_end() { return m_p == m_end; }
+  void next() {
+    if (!is_end()) ++m_p;
+  }
+  String *key() { return m_p->key; }
+  Object *value() { return m_p->val; }
+};
+
 //长度固定的String* -> Object*哈希表
 class FixedTable : public HeapObject {
-  struct Node {
-    String *key;
-    Object *val;
-    Node *next;
-  };
-
  private:
   size_t m_size;
   size_t m_used;
-  Node *m_pfree;
-  Node m_data[];
+  TableNode *m_pfree;
+  TableNode m_data[];
 
  private:
   bool has_free() {
-    Node *pend = m_data + m_size;
+    TableNode *pend = m_data + m_size;
     while (m_pfree < pend && m_pfree->key != nullptr) ++m_pfree;
     return m_pfree < pend;
   }
   //调用前必须先调用has_free
-  Node *new_node() {
+  TableNode *new_node() {
     ASSERT(m_pfree < m_data + m_size && m_pfree->key == nullptr);
     ++m_used;
     return m_pfree++;
   }
   size_t mainpos(String *key) { return key->hash() % m_size; }
-  Node *find_node(String *key) {
-    Node *p = m_data + mainpos(key);
+  TableNode *find_node(String *key) {
+    TableNode *p = m_data + mainpos(key);
     if (p->key == nullptr) return nullptr;
     while (p != nullptr) {
       ASSERT(mainpos(p->key) == mainpos(key));
@@ -345,8 +395,8 @@ class FixedTable : public HeapObject {
     }
     return nullptr;
   }
-  Node *find_or_create_node(String *key) {
-    Node *p = m_data + mainpos(key);
+  TableNode *find_or_create_node(String *key) {
+    TableNode *p = m_data + mainpos(key);
     if (p->key == nullptr) {
       p->key = key;
       ++m_used;
@@ -365,9 +415,9 @@ class FixedTable : public HeapObject {
     }
     //存在哈希冲突
     if (!has_free()) return nullptr;  //一定需要新建节点
-    Node *trans =
+    TableNode *trans =
         new_node();  //准备将mainpos(key)节点移动到新节点，以保证一条链上的mainpos一致
-    Node *ppre = m_data + mainpos(p->key);
+    TableNode *ppre = m_data + mainpos(p->key);
     while (ppre->next != p) ppre = ppre->next;
     *trans = *p;
     ppre->next = trans;
@@ -381,11 +431,11 @@ class FixedTable : public HeapObject {
   // 特殊情况：若删除的节点正好位于mainpos且next==nullptr且pfree指向此节点之前，则一定会被重新利用
   //          若删除的节点正好位于mainpos且next==nullptr且pfree指向此节点之后，则插入此mainpos时会被重新利用
   Object *remove_node(String *key) {
-    Node *p = find_node(key);
+    TableNode *p = find_node(key);
     if (p == nullptr) return nullptr;
     Object *ret = p->val;
     while (p->next != nullptr) {
-      Node *pnxt = p->next;
+      TableNode *pnxt = p->next;
       *p = *pnxt;
       p = pnxt;
     }
@@ -399,12 +449,12 @@ class FixedTable : public HeapObject {
 
  public:
   Object *get(String *key) {
-    Node *p = find_node(key);
+    TableNode *p = find_node(key);
     if (p == nullptr) return Failure::IndexNotFound;
     return p->val;
   }
   Object *set(String *key, Object *val, bool allow_new = true) {
-    Node *p;
+    TableNode *p;
     if (allow_new) {
       p = find_or_create_node(key);
       if (p == nullptr) return Failure::NoEnoughSpace;
@@ -431,10 +481,11 @@ class FixedTable : public HeapObject {
   void rehash_to(FixedTable *other) {
     ASSERT(m_used <= other->m_size);
     ASSERT(other->m_used == 0);
-    for (Node *p = m_data; p < m_data + m_size; p++) {
+    for (TableNode *p = m_data; p < m_data + m_size; p++) {
       if (p->key != nullptr) other->find_or_create_node(p->key)->val = p->val;
     }
   }
+  TableIterator get_iterator() { return TableIterator(m_data, m_pfree); }
 
  public:
   static void trace_ref(Object *obj, GCTracer *gct) {
@@ -559,6 +610,7 @@ class ByteArrayView {
     return m_array->length() / sizeof(T);
   }
 };
+
 //长度可变的Object*数组
 class Array : public HeapObject {
   FixedArray *m_array;
@@ -606,12 +658,35 @@ class Array : public HeapObject {
       try_shrink();
     }
   }
+  Object **begin() { return m_array->begin(); }
+  Object **end() { return m_array->begin() + m_length; }
 
  private:
-  static Object *get_index(Object *obj, Object *idx) {
-    // TODO
-    return Failure::Exception;
+  static Object *get_property(Object *obj, String *name, AccessSpecifier spec) {
+    Array *this_obj = Array::cast(obj);
+    if (String::Equal(name, "length")) {
+      return Integer::FromInt64(static_cast<int64_t>(this_obj->length()));
+    } else if (String::Equal(name, "capacity")) {
+      return Integer::FromInt64(static_cast<int64_t>(this_obj->capacity()));
+    } else {
+      return Failure::PropertyNotFound;
+    }
   }
+  static Object *set_property(Object *obj, String *name, Object *value,
+                              AccessSpecifier spec) {
+    Array *this_obj = Array::cast(obj);
+    if (String::Equal(name, "length")) {
+      return Failure::PropertyAccessDenied;
+    } else if (String::Equal(name, "capacity")) {
+      return Failure::PropertyAccessDenied;
+    } else {
+      return Failure::PropertyNotFound;
+    }
+  }
+  static Object *invoke_metafunction(Object *obj, MetaFunctionID id,
+                                     const Parameters &params);
+  static Object *invoke_memberfunc(Object *obj, String *name,
+                                   const Parameters &params);
   static void trace_ref(Object *obj, GCTracer *gct) {
     Array *_this = Array::cast(obj);
     FixedArray::trace_ref(_this->m_array, gct);
@@ -650,6 +725,7 @@ class Table : public HeapObject {
     Table *_this = Table::cast(obj);
     FixedTable::trace_ref(_this->m_table, gct);
   }
+  TableIterator get_iterator() { return m_table->get_iterator(); }
 
  public:
   OBJECT_DEF(Table)
@@ -686,6 +762,18 @@ class Exception : public HeapObject {
   DEF_R_ACCESSOR(info);
   DEF_R_ACCESSOR(data);
 };
+struct AccessDomain {
+  FixedTable *property;
+  FixedTable *memberfunc;
+};
+class RapidObject : public HeapObject {
+  Object *parent;
+  AccessDomain m_public;
+  AccessDomain m_protected;
+  AccessDomain m_private;
+
+ public:
+};
 
 //包含简单数据的对象的基类
 class Struct : public HeapObject {
@@ -706,6 +794,7 @@ class VarData : public Struct {
  public:
   String *name;
   uint16_t slot_id;
+
  private:
   DECL_TRACEREF(VarData, _M(name));
 
@@ -777,13 +866,16 @@ class FunctionData : public Struct {
 
 void debug_print(FILE *f, Object *obj);
 
-// ----Object Inline Implement--------
+// ---------------Object Inline Implement-----------------
 #define IS_HEAPOBJECT(_t) \
   (IsHeapObject() &&      \
    HeapObject::cast(this)->m_heapobj_type == HeapObjectType::_t)
+
 #define IMPL_IS_HEAPOBJ_DERIVED_FINAL(_t) \
   bool Object::Is##_t() { return IS_HEAPOBJECT(_t); }
+
 ITER_HEAPOBJ_DERIVED_FINAL(IMPL_IS_HEAPOBJ_DERIVED_FINAL)
+
 bool Object::IsNull() { return this == Heap::NullValue(); }
 bool Object::IsTrue() { return this == Heap::TrueValue(); }
 bool Object::IsFalse() { return this == Heap::FalseValue(); }
@@ -797,7 +889,46 @@ bool Object::IsStruct() {
 }
 #undef IMPL_IS_HEAPOBJ_DERIVED_FINAL
 #undef IS_HEAPOBJECT
-//--------------------------
+
+Object *Object::GetProperty(String *name, AccessSpecifier spec) {
+  if (!this->IsHeapObject()) return Failure::PropertyNotFound;
+  return HeapObject::cast(this)->get_interface()->get_property(this, name,
+                                                               spec);
+}
+Object *Object::SetProperty(String *name, Object *val, AccessSpecifier spec) {
+  if (!this->IsHeapObject()) return Failure::PropertyNotFound;
+  return HeapObject::cast(this)->get_interface()->set_property(this, name, val,
+                                                               spec);
+}
+inline Object *Object::InvokeMemberFunc(String *name,
+                                        const Parameters &params) {
+  if (this->IsHeapObject()) {
+    return HeapObject::cast(this)->get_interface()->invoke_memberfunc(
+        this, name, params);
+  } else {
+    VERIFY(0);  // TODO:实现值类型的InvokeMemberFunc
+  }
+  return nullptr;
+}
+inline Object *Object::InvokeMetaFunc(MetaFunctionID id,
+                                      const Parameters &params) {
+  if (this->IsHeapObject()) {
+    return HeapObject::cast(this)->get_interface()->invoke_metafunc(this, id,
+                                                                    params);
+  } else {
+    VERIFY(0);  // TODO:实现值类型的InvokeMetaFunc
+  }
+  return nullptr;
+}
+// Object *Object::GetMemberFunc(String *name, AccessSpecifier spec) {
+//  if (this->IsHeapObject()) {
+//    return HeapObject::cast(this)->get_interface()->get_memberfunc(this, name,
+//                                                                   spec);
+//  } else {
+//    VERIFY(0);
+//  }
+//}
+//--------------------------------------------------------------------
 
 //
 // class RSFunction : public RSObject {

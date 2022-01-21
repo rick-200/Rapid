@@ -1,75 +1,66 @@
-fuction '#global'@000002431DAACF90, (7)slots:
-  instructions(78 bytes):
+fuction '#global'@000001E5F6A7C0B0, (7)slots:
+  instructions(88 bytes):
     003: LOADK 0
-    006: LOADK 1
-    009: LOADK 2
-    012: LOADL 2
-    015: LOADK 1
-    016: LE
-    019: JMP_F 59
-    022: LOADK 2
-    025: LOADL 3
-    028: LOADK 3
-    029: LE
-    032: JMP_F 31
-    035: CLOSURE 0
-    038: LOADL 0
-    041: LOADL 3
-    044: CALL 2
-    047: STOREL 0
-    050: LOADL 3
-    053: LOADK 2
-    054: ADD
-    057: STOREL 3
-    060: JMP -35
-    062: POPN 1
-    065: LOADL 2
-    068: LOADK 2
-    069: ADD
-    072: STOREL 2
-    075: JMP -63
-    077: POPN 1
-    078: RETNULL
-  locals(4):
-    0 x:0
-    1 y:1
+    004: IMPORT
+    007: LOADK 1
+    010: LOADK 2
+    013: CLOSURE 0
+    016: LOADK 1
+    019: LOADK 2
+    022: CALL 2
+    025: MAKE_ARRAY 3
+    028: LOADL 1
+    031: LOADK 3
+    034: LOADK 4
+    037: THIS_CALL 1
+    038: POP
+    041: LOADK 5
+    044: LOADL 2
+    047: LOADL 1
+    050: LOADK 6
+    051: GET_P
+    052: LT
+    055: JMP_F 33
+    058: LOADL 0
+    061: LOADK 7
+    064: LOADL 1
+    067: LOADL 2
+    068: GET_I
+    071: THIS_CALL 1
+    072: POP
+    075: LOADL 2
+    078: LOADK 8
+    079: ADD
+    082: STOREL 2
+    085: JMP -41
+    087: POPN 1
+    088: RETNULL
+  locals(3):
+    0 console:0
+    1 arr:1
     2 i:2
-    3 i:3
-  consts(4):
-    0 0
-    1 2
-    2 1
-    3 10
+  consts(9):
+    0 'console'
+    1 123
+    2 456
+    3 'push'
+    4 321
+    5 0
+    6 'length'
+    7 'print'
+    8 1
   inner func(1):
-    0 'add'@000002431DAAD030
+    0 'add'@000001E5F6A7C150
 
-fuction 'add'@000002431DAAD030, (7)slots:
-  instructions(46 bytes):
+fuction 'add'@000001E5F6A7C150, (4)slots:
+  instructions(8 bytes):
     003: LOADL 0
     006: LOADL 1
-    009: LOADL 0
-    012: LOADL 1
-    013: ADD
-    016: STOREL 0
-    019: LOADL 2
-    022: LOADL 0
-    023: MUL
-    026: LOADL 2
-    029: LOADL 3
-    030: FDIV
-    033: LOADL 1
-    034: FDIV
-    035: BAND
-    038: STOREL 1
-    041: LOADL 2
-    044: LOADL 3
-    045: ADD
-    046: RET
-  locals(4):
+    007: ADD
+    008: RET
+  locals(2):
     0 a:0
     1 b:1
-    2 c:2
-    3 d:3
   consts(0):
   inner func(0):
 

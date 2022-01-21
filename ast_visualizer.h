@@ -224,6 +224,15 @@ class VisualizerVisitor : public ASTVisitor {
   virtual void VisitThisExpr(ThisExpr *node) { DefNode("this"); }
   virtual void VisitParamsExpr(ParamsExpr *node) { DefNode("params"); }
   virtual void VisitImportExpr(ImportExpr *node) { DefNode("import"); }
+  virtual void VisitArrayExpr(ArrayExpr *p) {
+    DefNode("mk_array");
+    int mk_a = ret;
+    for (size_t i = 0; i < p->params.size(); i++) {
+      Visit(p->params[i]);
+      Connect(mk_a, ret);
+    }
+    ret = mk_a;
+  }
 };
 
 inline Handle<String> VisualizeAST(AstNode *node) {

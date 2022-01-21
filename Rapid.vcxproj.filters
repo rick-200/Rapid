@@ -122,6 +122,9 @@
     <ClInclude Include="console.h">
       <Filter>standard_module</Filter>
     </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="native_debug.natvis" />

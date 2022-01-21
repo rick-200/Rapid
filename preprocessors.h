@@ -9,12 +9,15 @@ static_assert(sizeof(void*) == 8, "当前只能在64位机器上使用！");
 #ifdef _DEBUG
 #define IF_DEBUG(...) __VA_ARGS__
 #define ASSERT(exp) assert(exp)
+// VERIFY为开发中暂时使用，后期全部换成错误处理
+#define VERIFY(exp) assert(exp)
 #else
 #define ASSERT(exp) ASSUME(exp)
 #define IF_DEBUG(...) 
-#endif
 // VERIFY为开发中暂时使用，后期全部换成错误处理
-#define VERIFY(exp) (assert(exp))
+#define VERIFY(exp) abort()
+#endif
+
 
 #define DISABLE_COPY(_t)  \
   _t(const _t&) = delete; \

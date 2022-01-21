@@ -18,6 +18,7 @@ class Executer : public StaticClass {
                                      const Parameters &param);
   static Handle<Object> CallFunction(Handle<FunctionData> fd,
                                      const Parameters &param);
+  static void RegisterModule(Handle<String> name, Handle<Object> md);
 };
 class RawParameters {
   Object **m_p_raw;
@@ -56,7 +57,7 @@ class Parameters : public RawParameters {
     return Handle<Object>(RawParameters::get(pos), non_local);
   }
   Handle<Object> get_this() const {
-    return Handle<Object>(RawParameters::get_this());
+    return Handle<Object>(RawParameters::get_this(), non_local);
   }
   Handle<Object> operator[](size_t pos) const { return get(pos); }
 };

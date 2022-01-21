@@ -665,7 +665,7 @@ void CodeGenerator::VisitVarExpr(VarExpr *p) {
 void CodeGenerator::VisitMemberExpr(MemberExpr *p) {
   Visit(p->target);
   LoadK(p->name);
-  AppendOp(Opcode::GET_M);
+  AppendOp(Opcode::GET_P);
   pop();
 }
 
@@ -891,7 +891,7 @@ void CodeGenerator::VisitAssignExpr(AssignExpr *p, bool from_expr_stat) {
   } else if (p->left->type == AstNodeType::MemberExpr) {
     Visit(((MemberExpr *)p->left)->target);
     LoadK(((MemberExpr *)p->left)->name);
-    AppendOp(Opcode::SET_M);
+    AppendOp(Opcode::SET_P);
     pop(2);
   } else if (p->left->type == AstNodeType::IndexExpr) {
     Visit(((IndexExpr *)p->left)->target);
@@ -915,6 +915,20 @@ void CodeGenerator::VisitParamsExpr(ParamsExpr *p) {
 
 void CodeGenerator::VisitImportExpr(ImportExpr *p) {
   error_illegal_use(p->row, p->col, "import");
+}
+
+void CodeGenerator::VisitArrayExpr(ArrayExpr *p) {
+  if (p->params.size() == 0) {
+    AppendOp(Opcode::MAKE_ARRAY_0);
+    push();
+  } else {
+    for (size_t i = 0; i < p->params.size(); i++) {
+      Visit(p->params[i]);
+    }
+    AppendOp(Opcode::MAKE_ARRAY);
+    AppendU16((uint16_t)p->params.size());
+    pop(p->params.size() - 1);
+  }
 }
 
 }  // namespace internal
