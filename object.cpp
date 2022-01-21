@@ -24,7 +24,7 @@ Object* Array::invoke_metafunction(Object* obj, MetaFunctionID id,
     int64_t pos = Integer::cast(params[0].ptr())->value();
     if (pos < 0 || pos >= _this->length()) VERIFY(0);
     _this->set(pos, params[1].ptr());
-    return Heap::NullValue();
+    return nullptr;
   } else {
     return Failure::NotImplemented;
   }
@@ -37,11 +37,11 @@ Object* Array::invoke_memberfunc(Object* obj, String* name,
   if (String::Equal(name, "push")) {
     if (rp.count() != 1) VERIFY(0);
     _this->push(rp[0]);
-    return Heap::NullValue();
+    return nullptr;
   } else if (String::Equal(name, "reserve")) {
     if (rp.count() != 1 || rp[0]->IsInteger()) VERIFY(0);
     _this->reserve(Integer::cast(rp[0])->value());
-    return Heap::NullValue();
+    return nullptr;
   }
   return Failure::NotImplemented;
 }

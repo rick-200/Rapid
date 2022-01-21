@@ -20,6 +20,9 @@ class InstructionArray;
 class Exception;
 class NativeObject;
 struct ObjectInterface;
+/*
+注意：Heap的Alloc函数都不会触发GC，若没有可分配内存，TODO:返回nullptr
+*/
 class Heap : public StaticClass {
  public:
   static void *RawAlloc(size_t size);
@@ -31,12 +34,12 @@ class Heap : public StaticClass {
 
  public:  //以下函数不会调用GC
   static String *AllocString(const char *cstr, size_t length);
-  static Array *AllocArray();
+  static Array *AllocArray(size_t reserved = 0);
   static Table *AllocTable();
   static FixedArray *AllocFixedArray(size_t length);
   static FixedTable *AllocFixedTable(size_t size);
   static InstructionArray *AllocInstructionArray(size_t length);
-  static Object *NullValue();
+  // static Object *NullValue();
   static Object *TrueValue();
   static Object *FalseValue();
   static Exception *AllocException(String *type, String *info, Object *data);
@@ -49,6 +52,8 @@ class Heap : public StaticClass {
                                          const ObjectInterface *interface);
 
   static uint64_t ObjectCount();
+  //所有Global对象创建完毕后，调用此函数允许GC
+  static void EnableGC();
 
  public:
   static void DoGC();

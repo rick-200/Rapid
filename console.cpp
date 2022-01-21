@@ -67,7 +67,7 @@ Object* print(const Parameters& params) {
     if (i != params.count() - 1) printf("    ");
   }
   printf("\n");
-  return Heap::NullValue();
+  return nullptr;
 }
 Object* console_get_property(Object* obj, String* name, AccessSpecifier spec) {
   return Failure::PropertyNotFound;
@@ -81,7 +81,7 @@ Object* console_invoke_memberfunc(Object* obj, String* name,
   if (String::Equal(name, "print")) {
     return print(params);
   }
-  return Heap::NullValue();
+  return nullptr;
 }
 Object* console_invoke_metafunc(Object* obj, MetaFunctionID id,
                                 const Parameters& params) {

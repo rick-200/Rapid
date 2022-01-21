@@ -266,6 +266,14 @@ l_begin_switch:
       }
       break;
     case '/':
+      if (ps[1] == '*') {
+        Step(2);
+        while (!(ps[0] == '*' && ps[1] == '/')) {
+          Step(1);
+        }
+        Step(2);
+        goto l_begin_switch;
+      }
       if (ps[1] == '=') {
         InitToken(TokenType::FDIV_ASSIGN);
         Step(2);
@@ -565,10 +573,16 @@ void CodeGenerator::VisitLoopStat(LoopStat *p) {
   Visit(p->cond);
   Codepos jmp_to_end = PrepareJumpIf(false);
   loop_ctx = current;
+
+  EnterScope();  // body单独定义一个Scope，
+
   Visit(p->body);
   loop_ctx = nullptr;  //不允许after出现break和continue
   Codepos continue_topos = CurrentPos();
   Visit(p->after);
+
+  LeaveScope();  // body LeaveScope
+
   Codepos jmp_to_begin = PrepareJump();
   Codepos end = CurrentPos();
 
@@ -581,7 +595,8 @@ void CodeGenerator::VisitLoopStat(LoopStat *p) {
   for (auto pos : current->continue_pos) {
     ApplyJump(pos, continue_topos);
   }
-  LeaveScope();
+
+  LeaveScope();  //每次循环都应该LeaveScope
 }
 
 void CodeGenerator::VisitVarDecl(VarDecl *p) {

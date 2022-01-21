@@ -117,14 +117,16 @@ class Object {
   inline bool IsInteger() { return TEST_PTR_TAG(this, TAG_INT); }
   inline bool IsFloat() { return TEST_PTR_TAG(this, TAG_FLOAT); }
   inline bool IsFailure() { return TEST_PTR_TAG(this, TAG_FAILURE); }
-  inline bool IsHeapObject() { return TEST_PTR_TAG(this, TAG_HEAPOBJ); }
+  inline bool IsHeapObject() {
+    return this != nullptr && TEST_PTR_TAG(this, TAG_HEAPOBJ);
+  }
+  inline bool IsNull() { return this == nullptr; }
 #define DEF_ISXXX(_t) inline bool Is##_t();
   ITER_HEAPOBJ_DERIVED_FINAL(DEF_ISXXX);
 
   DEF_ISXXX(True);
   DEF_ISXXX(False);
   DEF_ISXXX(Bool);
-  DEF_ISXXX(Null);
   DEF_ISXXX(Struct);
 
  protected:
@@ -490,10 +492,10 @@ class FixedTable : public HeapObject {
  public:
   static void trace_ref(Object *obj, GCTracer *gct) {
     FixedTable *_this = FixedTable::cast(obj);
-    for (size_t i = 0; i < _this->m_size; i++) {
-      if (_this->m_data[i].key != nullptr) {
-        gct->Trace(_this->m_data[i].key);
-        gct->Trace(_this->m_data[i].val);
+    for (TableNode *p = _this->m_data; p < _this->m_pfree; p++) {
+      if (p->key != nullptr) {
+        gct->Trace(p->key);
+        gct->Trace(p->val);
       }
     }
   }
@@ -650,8 +652,8 @@ class Array : public HeapObject {
   void resize(size_t new_len) {
     if (new_len > m_length) {
       reserve(new_len);
-      Object *null_v = Heap::NullValue();
-      for (size_t i = m_length; i < new_len; i++) m_array->set(i, null_v);
+      //Object *null_v = Heap::NullValue();
+      for (size_t i = m_length; i < new_len; i++) m_array->set(i, nullptr);
       m_length = new_len;
     } else if (new_len < m_length) {
       m_length = new_len;
@@ -689,7 +691,7 @@ class Array : public HeapObject {
                                    const Parameters &params);
   static void trace_ref(Object *obj, GCTracer *gct) {
     Array *_this = Array::cast(obj);
-    FixedArray::trace_ref(_this->m_array, gct);
+    gct->Trace(_this->m_array);
   }
 
  public:
@@ -723,7 +725,7 @@ class Table : public HeapObject {
   bool exists(String *key) { return m_table->exists(key); }
   static void trace_ref(Object *obj, GCTracer *gct) {
     Table *_this = Table::cast(obj);
-    FixedTable::trace_ref(_this->m_table, gct);
+    gct->Trace(_this->m_table);
   }
   TableIterator get_iterator() { return m_table->get_iterator(); }
 
@@ -876,7 +878,6 @@ void debug_print(FILE *f, Object *obj);
 
 ITER_HEAPOBJ_DERIVED_FINAL(IMPL_IS_HEAPOBJ_DERIVED_FINAL)
 
-bool Object::IsNull() { return this == Heap::NullValue(); }
 bool Object::IsTrue() { return this == Heap::TrueValue(); }
 bool Object::IsFalse() { return this == Heap::FalseValue(); }
 bool Object::IsBool() { return IsTrue() || IsFalse(); }

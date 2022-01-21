@@ -6,6 +6,7 @@
 #include <type_traits>
 
 #include "debug.h"
+#include "executer.h"
 #include "global.h"
 #include "handle.h"
 #include "object.h"
@@ -13,10 +14,14 @@
 namespace rapid {
 namespace internal {
 
-class HeapImpl : public Heap {
+class HeapImpl /*public: Heap --
+                  不应该继承，否则Heap中调用函数时可能调用未被重写的函数*/
+{
   size_t m_usage;
   uint8_t m_color;
-  Object *m_true, *m_false, *m_null;
+  Object *m_true, *m_false;
+  bool m_enable_gc;
+  // Object  *m_null;
   struct {
     HeapObject *first, *last;
   } m_objs, m_roots;
@@ -66,6 +71,7 @@ class HeapImpl : public Heap {
     h->m_color = 0;
     h->m_usage = 0;
     h->m_object_count = 0;
+    h->m_enable_gc = false;
 
     h->m_objs.first = h->m_objs.last =
         (HeapObject *)h->AllocObject<HeapObject>(sizeof(HeapObject));
@@ -77,28 +83,29 @@ class HeapImpl : public Heap {
     h->m_roots.last->m_gctag = h->m_color;
     h->m_roots.last->m_nextobj = nullptr;
 
-    h->m_null =
-        (SpecialValue *)h->AllocObject<SpecialValue>(sizeof(SpecialValue));
+    // h->m_null =
+    //(SpecialValue *)h->AllocObject<SpecialValue>(sizeof(SpecialValue));
     h->m_true =
         (SpecialValue *)h->AllocObject<SpecialValue>(sizeof(SpecialValue));
     h->m_false =
         (SpecialValue *)h->AllocObject<SpecialValue>(sizeof(SpecialValue));
 
-    reinterpret_cast<SpecialValue *>(h->m_null)->m_heapobj_type =
-        HeapObjectType::SpecialValue;
+    // reinterpret_cast<SpecialValue *>(h->m_null)->m_heapobj_type =
+    // HeapObjectType::SpecialValue;
     reinterpret_cast<SpecialValue *>(h->m_true)->m_heapobj_type =
         HeapObjectType::SpecialValue;
     reinterpret_cast<SpecialValue *>(h->m_false)->m_heapobj_type =
         HeapObjectType::SpecialValue;
 
-    reinterpret_cast<SpecialValue *>(h->m_null)->m_interface =
-        &SpecialValue::Interface;
+    // reinterpret_cast<SpecialValue *>(h->m_null)->m_interface =
+    //&SpecialValue::Interface;
     reinterpret_cast<SpecialValue *>(h->m_true)->m_interface =
         &SpecialValue::Interface;
     reinterpret_cast<SpecialValue *>(h->m_false)->m_interface =
         &SpecialValue::Interface;
 
-    reinterpret_cast<SpecialValue *>(h->m_null)->m_val = SpecialValue::NullVal;
+    // reinterpret_cast<SpecialValue *>(h->m_null)->m_val =
+    // SpecialValue::NullVal;
     reinterpret_cast<SpecialValue *>(h->m_true)->m_val = SpecialValue::TrueVal;
     reinterpret_cast<SpecialValue *>(h->m_false)->m_val =
         SpecialValue::FalseVal;
@@ -117,6 +124,7 @@ class HeapImpl : public Heap {
   _p->m_interface = &_t::Interface;                 \
   Register(_p);
 
+
   String *AllocString(const char *cstr, size_t length) {
     String *s = (String *)AllocObject<String>(sizeof(String) + length + 1);
     s->m_length = length;
@@ -127,10 +135,10 @@ class HeapImpl : public Heap {
     ALLOC_HEAPOBJECT(s, String);
     return s;
   }
-  Array *AllocArray() {
+  Array *AllocArray(size_t reserved) {
     Array *p = (Array *)AllocObject<Array>(sizeof(Array));
     p->m_length = 0;
-    p->m_array = AllocFixedArray(0);
+    p->m_array = AllocFixedArray(reserved);
     ALLOC_HEAPOBJECT(p, Array);
     return p;
   }
@@ -144,8 +152,8 @@ class HeapImpl : public Heap {
     FixedArray *p = (FixedArray *)AllocObject<FixedArray>(
         sizeof(FixedArray) + sizeof(Object *) * length);
     p->m_length = length;
-    Object *null_v = NullValue();
-    for (size_t i = 0; i < length; i++) p->m_data[i] = null_v;
+    // Object *null_v = NullValue();
+    for (size_t i = 0; i < length; i++) p->m_data[i] = nullptr;
     ALLOC_HEAPOBJECT(p, FixedArray);
     return p;
   }
@@ -184,7 +192,8 @@ class HeapImpl : public Heap {
     ALLOC_HEAPOBJECT(p, Exception);
     return p;
   }
-  Object *NullValue() { return this->m_null; }
+  void EnableGC() { m_enable_gc = true; }
+  // Object *NullValue() { return this->m_null; }
   Object *TrueValue() { return this->m_true; }
   Object *FalseValue() { return this->m_false; }
 #define ALLOC_STRUCT_IMPL(_t)                \
@@ -201,21 +210,23 @@ class HeapImpl : public Heap {
   FunctionData *AllocFunctionData() { ALLOC_STRUCT_IMPL(FunctionData); }
   uint64_t ObjectCount() { return this->m_object_count; }
   void DoGC() {
-    return;  // NO_GC
-    DBG_LOG("begin gc\n");
+    if (!m_enable_gc) return;
+    // return;  // NO_GC
+    // DBG_LOG("begin gc\n");
     this->m_color = (this->m_color + 1) & 1;
     GCTracer gct(this->m_color);
-    DBG_LOG("begin trace\n");
+    // DBG_LOG("begin trace\n");
     for (HeapObject *p = this->m_roots.first->m_nextobj; p != nullptr;
          p = p->m_nextobj) {
       gct.Trace(p);
-      DBG_LOG("trace object: %p\n", p);
+      // DBG_LOG("trace object: %p\n", p);
     }
-    DBG_LOG("trace HandleContainer\n");
+    Executer::TraceStack(&gct);
+    // DBG_LOG("trace HandleContainer\n");
     HandleContainer::TraceRef(&gct);
-    DBG_LOG("end trace\n");
+    // DBG_LOG("end trace\n");
     HeapObject *p = this->m_objs.first->m_nextobj, *pre = this->m_objs.first;
-    DBG_LOG("begin sweep\n");
+    // DBG_LOG("begin sweep\n");
     while (p != nullptr) {
       if (p->m_gctag != this->m_color) {
         HeapObject *pdel = p;
@@ -233,22 +244,25 @@ class HeapImpl : public Heap {
         p = p->m_nextobj;
       }
     }
-    DBG_LOG("end sweep\n");
-    DBG_LOG("end gc\n");
+    // DBG_LOG("end sweep\n");
+    // DBG_LOG("end gc\n");
   }
 };
-#define CALL_HEAP_IMPL(_f, ...) ((HeapImpl *)Global::GetHeap())->_f(__VA_ARGS__)
+#define CALL_HEAP_IMPL(_f, ...) \
+  (reinterpret_cast<HeapImpl *>(Global::GetHeap())->_f(__VA_ARGS__))
 void *Heap::RawAlloc(size_t size) { return HeapImpl::RawAlloc(size); }
 void Heap::RawFree(void *p) { return HeapImpl::RawFree(p); }
 
-Heap *Heap::Create() { return HeapImpl::Create(); }
+Heap *Heap::Create() { return reinterpret_cast<Heap *>(HeapImpl::Create()); }
 
 void Heap::Destory(Heap *heap) { return HeapImpl::Destory(heap); }
 
 String *Heap::AllocString(const char *cstr, size_t length) {
   return CALL_HEAP_IMPL(AllocString, cstr, length);
 }
-Array *Heap::AllocArray() { return CALL_HEAP_IMPL(AllocArray); }
+Array *Heap::AllocArray(size_t reserved) {
+  return CALL_HEAP_IMPL(AllocArray, reserved);
+}
 Table *Heap::AllocTable() { return CALL_HEAP_IMPL(AllocTable); }
 FixedArray *Heap::AllocFixedArray(size_t length) {
   return CALL_HEAP_IMPL(AllocFixedArray, length);
@@ -259,7 +273,7 @@ FixedTable *Heap::AllocFixedTable(size_t size) {
 InstructionArray *Heap::AllocInstructionArray(size_t length) {
   return CALL_HEAP_IMPL(AllocInstructionArray, length);
 }
-Object *Heap::NullValue() { return CALL_HEAP_IMPL(NullValue); }
+// Object *Heap::NullValue() { return CALL_HEAP_IMPL(NullValue); }
 Object *Heap::TrueValue() { return CALL_HEAP_IMPL(TrueValue); }
 Object *Heap::FalseValue() { return CALL_HEAP_IMPL(FalseValue); }
 Exception *Heap::AllocException(String *type, String *info, Object *data) {
@@ -281,6 +295,7 @@ NativeObject *Heap::AllocNativeObject(void *data,
   return CALL_HEAP_IMPL(AllocNativeObject, data, interface);
 }
 uint64_t Heap::ObjectCount() { return CALL_HEAP_IMPL(ObjectCount); }
+void Heap::EnableGC() { return CALL_HEAP_IMPL(EnableGC); }
 void Heap::DoGC() { return CALL_HEAP_IMPL(DoGC); }
 
 GCTracer::GCTracer(uint8_t color) : m_color(color) {}

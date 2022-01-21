@@ -6,8 +6,16 @@
 #include "object.h"
 namespace rapid {
 namespace internal {
+
+#if DEBUG_ALWAYS_GC
+#define DEBUG_GC Heap::DoGC()
+#else
+#define DEBUG_GC ((void)0)
+#endif  // DEBUG_ALWAYS_GC
+
 #define CALL_HEAP_ALLOC(_t, ...)                           \
   {                                                        \
+    DEBUG_GC;                                              \
     _t *__pobj_ = Heap::Alloc##_t(__VA_ARGS__);            \
     if (!__pobj_->IsFailure()) return Handle<_t>(__pobj_); \
     if (Failure::cast(__pobj_) != Failure::RetryAfterGC)   \
@@ -17,6 +25,7 @@ namespace internal {
     if (__pobj_->IsFailure()) VERIFY(0);                   \
     return Handle<_t>(__pobj_);                            \
   }
+
 class Factory {
  public:
   static Handle<Integer> NewInteger(int64_t x) {
@@ -28,9 +37,7 @@ class Factory {
   static Handle<Object> NewBool(bool x) {
     return x ? TrueValue() : FalseValue();
   }
-  static Handle<Object> NullValue() {
-    return Handle<Object>(Heap::NullValue());
-  }
+  static Handle<Object> NullValue() { return Handle<Object>(nullptr); }
   static Handle<Object> TrueValue() {
     return Handle<Object>(Heap::TrueValue());
   }
@@ -65,10 +72,10 @@ class Factory {
   }
   static Handle<Exception> NewException(Handle<String> type,
                                         Handle<String> info) {
-    CALL_HEAP_ALLOC(Exception, *type, *info, Heap::NullValue());
+    CALL_HEAP_ALLOC(Exception, *type, *info, nullptr);
   }
   static Handle<Exception> NewException(Handle<String> type) {
-    CALL_HEAP_ALLOC(Exception, *type, *type, Heap::NullValue());
+    CALL_HEAP_ALLOC(Exception, *type, *type, nullptr);
   }
 #define DEF_NEW_STRUCT(_t) \
   static Handle<_t> New##_t() { CALL_HEAP_ALLOC(_t); }

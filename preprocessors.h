@@ -4,6 +4,8 @@
 #include <new>
 static_assert(sizeof(void*) == 8, "当前只能在64位机器上使用！");
 
+#define DEBUG_ALWAYS_GC 1
+
 #define ASSUME(exp) __assume(exp)
 
 #ifdef _DEBUG
@@ -17,6 +19,7 @@ static_assert(sizeof(void*) == 8, "当前只能在64位机器上使用！");
 // VERIFY为开发中暂时使用，后期全部换成错误处理
 #define VERIFY(exp) abort()
 #endif
+
 
 
 #define DISABLE_COPY(_t)  \

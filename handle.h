@@ -97,8 +97,8 @@ class Handle {
 
  public:
   Handle() = default;
-  Handle(const Handle&) = default;
-  Handle& operator=(const Handle&) = default;
+  Handle(const Handle& h) = default;
+  //Handle& operator=(const Handle& h) = default;
   explicit Handle(T* p) {
     if (p != nullptr)
       m_p = reinterpret_cast<T*>(*Global::GetHC()->OpenLocalSlot(p));

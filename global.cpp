@@ -29,6 +29,7 @@ void Global::Init(GlobalData *data) {
   global_data->hsc = HandleContainer::Create();
   global_data->cmz = CompilingMemoryZone::Create();
   global_data->exec = Executer::Create();
+  Heap::EnableGC();
 }
 
 void Global::Close() {

@@ -1,9 +1,24 @@
-var console=import("console");
 func add(a,b){
+    var xxx=[123];
     return a+b;
 }
-var arr = [123,456,add(123,456)];
+for(var i=0;i<10000;i+=1){
+var test_gc=[1,2,3,4,add(5,6)];
+}
+/**/
+/*
+var console=import("console");
+func add(a,b){
+    var xxx=[123];
+    return a+b;
+}
+for(var i=0;i<1000000;i+=1){
+var test_gc=[1,2,3,4];
+}
+var arr = [123,45.6,add(123,456)];
 arr.push(321);
+console.print("array:");
 for(var i=0;i<arr.length;i+=1){
     console.print(arr[i]);
 }
+*/

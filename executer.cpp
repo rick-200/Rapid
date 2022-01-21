@@ -33,12 +33,15 @@ class ScriptStack {
   //在top的基础上保留至少need个slot
   //注意：Reserve调用后，之前GetRawPtr返回值（可能）失效
   void Reserve(StackOffset top, size_t need) {
-    size_t oldsize = m_size;
+    size_t new_size = (size_t)(GetRawPtr(top) + need - m_p);
+    if (new_size <= m_size) return;
+    if (new_size <= (m_size << 1)) new_size = m_size << 1;
+    size_t old_size = m_size;
     Object **oldp = m_p;
-    m_size = std::max(m_size << 1, (size_t)(GetRawPtr(top) + need - m_p));
     m_p = (Object **)malloc(sizeof(Object *) * m_size);
     VERIFY(m_p != nullptr);
-    memcpy(m_p, oldp, sizeof(Object *) * oldsize);
+    memcpy(m_p, oldp, sizeof(Object *) * old_size);
+    free(oldp);
   }
 };
 class Stack {
@@ -241,7 +244,6 @@ class ExecuterImpl : public Executer {
 
   bool prepare_call(StackOffset top, size_t param_cnt, Object *this_obj,
                     FunctionData *fd, SharedFunctionData *sfd) {
-    ASSERT(this_obj != nullptr);        // Heap::NullValue();
     if (sfd->param_cnt != param_cnt) {  //参数不匹配
       return false;
     }
@@ -289,8 +291,6 @@ class ExecuterImpl : public Executer {
   //执行最顶上的CallInfo，直到CallType为NativeCall
   void Execute() {
   l_begin:
-    HandleScope hs;
-
     CallInfo *ci = &list_ci.back();
     byte *pc = ci->pc;
     // top指向栈顶元素（不是栈顶+1）
@@ -308,8 +308,7 @@ class ExecuterImpl : public Executer {
       inner_func = ci->sfd->inner_func->begin();
     } else {
       ASSERT(ci->t == CallType::NativeCall);
-      // TODO:NativeCall
-      return;
+      return;  //直接返回
     }
 
     while (true) {
@@ -344,7 +343,7 @@ class ExecuterImpl : public Executer {
           break;
         case Opcode::PUSH_NULL:
           ++top;
-          top[0] = Heap::NullValue();
+          top[0] = nullptr;
           break;
         case Opcode::POP:
           --top;
@@ -357,23 +356,22 @@ class ExecuterImpl : public Executer {
           if (m_module->exists(String::cast(top[0]))) {
             top[0] = m_module->get(String::cast(top[0]));
           } else {
-            top[0] = Heap::NullValue();
+            top[0] = nullptr;
           }
           break;
         case Opcode::MAKE_ARRAY: {
-          Handle<Array> arr = Factory::NewArray();
           uint16_t cnt = *(uint16_t *)pc;
           pc += 2;
-          arr->reserve(cnt);
+          Array *arr = Heap::AllocArray(cnt);  // TODO: 处理AllocArray失败的情况
           for (Object **p = top - cnt + 1; p <= top; p++) {
-            arr->push(*p);
+            arr->push(*p);  //此处不会触发GC，否则arr未被保护，会被回收
           }
           top -= cnt - 1;
-          top[0] = arr.ptr();
+          top[0] = arr;
           break;
         }
         case Opcode::MAKE_ARRAY_0:
-          top[1] = Factory::NewArray().ptr();
+          top[1] = Heap::AllocArray();  // TODO: 处理AllocArray失败的情况
           ++top;
           break;
         case Opcode::ADD:
@@ -453,7 +451,7 @@ class ExecuterImpl : public Executer {
           --top;
           break;
         case Opcode::GET_I: {
-          Parameters param(Heap::NullValue(), top, 1);
+          Parameters param(nullptr, top, 1);
           top[-1] = top[-1]->InvokeMetaFunc(MetaFunctionID::GET_INDEX, param);
           --top;
           break;
@@ -461,7 +459,7 @@ class ExecuterImpl : public Executer {
 
         case Opcode::SET_I: {
           Object *p[] = {top[0], top[-2]};
-          Parameters param(Heap::NullValue(), p, 2);
+          Parameters param(nullptr, p, 2);
           top[-2] = top[-1]->InvokeMetaFunc(MetaFunctionID::SET_INDEX, param);
           top -= 2;
           break;
@@ -500,7 +498,7 @@ class ExecuterImpl : public Executer {
           Object *this_obj;
           Object *func;
           if (op == Opcode::CALL) {
-            this_obj = Heap::NullValue();
+            this_obj = nullptr;
             func = *(top - cnt);
             top -= cnt;  //此时top指向要调用的对象，同时此位置也接受返回值
           } else {  // op == Opcode::THIS_CALL
@@ -551,24 +549,36 @@ class ExecuterImpl : public Executer {
         case Opcode::RETNULL:
           list_ci.pop();
           m_stack.GetRawPtr(list_ci.back().top)[0] =
-              Heap::NullValue();  //返回值保存至上一层调用的栈顶
+              nullptr;  //返回值保存至上一层调用的栈顶
           goto l_to_begin;
           break;
         case Opcode::CLOSURE: {
-          FunctionData *fd = *Factory::NewFunctionData();
-          fd->shared_data =
+          SharedFunctionData *sfd =
               SharedFunctionData::cast(inner_func[*(uint16_t *)pc]);
           pc += 2;
-          // fd->this_object = Heap::NullValue();
-          *++top = fd;
+          if (sfd->extvars->length() == 0) {
+            *++top = sfd;
+          } else {
+            FunctionData *fd = Heap::
+                AllocFunctionData();  // TODO:处理AllocFunctionData失败的情况
+            fd->shared_data = sfd;
+            *++top = fd;
+          }
           break;
         }
         case Opcode::CLOSURE_SELF: {
-          FunctionData *fd = *Factory::NewFunctionData();
-          fd->shared_data = ci->fd->shared_data;
-          pc += 2;
-          // fd->this_object = Heap::NullValue();
-          *++top = fd;
+          ASSERT(ci->t == CallType::FullCall ||
+                 ci->t == CallType::StatelessCall);
+          SharedFunctionData *sfd =
+              ci->t == CallType::FullCall ? ci->fd->shared_data : ci->sfd;
+          if (sfd->extvars->length() == 0) {
+            *++top = sfd;
+          } else {
+            FunctionData *fd = Heap::
+                AllocFunctionData();  // TODO:处理AllocFunctionData失败的情况
+            fd->shared_data = sfd;
+            *++top = fd;
+          }
           break;
         }
         default:
@@ -582,6 +592,7 @@ class ExecuterImpl : public Executer {
     IF_DEBUG(dbg_print_stack());
     goto l_begin;
   l_return:;
+    ptr_top = nullptr;
   }
 
   // void fill_param(const RawParameters &param, Object **p,
@@ -617,6 +628,7 @@ class ExecuterImpl : public Executer {
     native_ci.t = CallType::NativeCall;
     native_ci.base = base;
     native_ci.top = base;
+    m_stack.GetRawPtr(base)[0] = nullptr;
     list_ci.push(native_ci);
 
     base = AddOffset(base, 1);
@@ -656,9 +668,27 @@ class ExecuterImpl : public Executer {
   }
 
  public:
-  void TraceStack(GCTracer *gct) {}
-  void CallRapidFunc(Handle<FunctionData> func, Handle<Object> *params,
-                     size_t param_cnt) {}
+  void TraceStack(GCTracer *gct) {
+    gct->Trace(this->m_module);
+    if (list_ci.empty()) return;
+    if (ptr_top != nullptr) {
+      ASSERT(list_ci.back().t != CallType::NativeCall);
+      // ASSERT(list_ci.back().top<=)
+      list_ci.back().top = m_stack.GetOffset(*ptr_top);  //写回
+    }
+    for (const auto &ci : list_ci) {
+      if (ci.t == CallType::FullCall)
+        gct->Trace(ci.fd);
+      else if (ci.t == CallType::StatelessCall)
+        gct->Trace(ci.sfd);
+    }
+    size_t top = static_cast<size_t>(list_ci.back().top);
+    for (size_t i = static_cast<size_t>(0); i <= top; i++) {
+      gct->Trace(*m_stack.GetRawPtr(static_cast<StackOffset>(i)));
+    }
+  }
+  // void CallRapidFunc(Handle<FunctionData> func, Handle<Object> *params,
+  //                   size_t param_cnt) {}
   void ThrowException(Handle<Exception> e) {
     if (err != nullptr) {
       VERIFY(0);

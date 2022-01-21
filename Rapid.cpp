@@ -120,7 +120,7 @@ void test_compile(Handle<String> code) {
   fclose(f);
   Executer::RegisterModule(Factory::NewString("console"),
                            stdmodule::GetConsoleModule());
-  Parameters param(Heap::NullValue(), nullptr, 0);
+  Parameters param(nullptr, nullptr, 0);
   Handle<Object> ret = Executer::CallFunction(sfd, param);
 }
 int main() {

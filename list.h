@@ -9,7 +9,8 @@ namespace rapid {
 namespace internal {
 template <class T>
 class List : public Malloced {
-  static_assert(std::is_trivial_v<T>, "List<T>: T must be trivial type.");
+  static_assert(std::is_trivially_destructible_v<T>,
+                "List<T>: T must be trivially destructible.");
   T *m_p;
   size_t m_siz, m_cap;
 
