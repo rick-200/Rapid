@@ -16,6 +16,7 @@ namespace internal {
 #define CALL_HEAP_ALLOC(_t, ...)                           \
   {                                                        \
     DEBUG_GC;                                              \
+    if (Heap::NeedGC()) Heap::DoGC();                      \
     _t *__pobj_ = Heap::Alloc##_t(__VA_ARGS__);            \
     if (!__pobj_->IsFailure()) return Handle<_t>(__pobj_); \
     if (Failure::cast(__pobj_) != Failure::RetryAfterGC)   \

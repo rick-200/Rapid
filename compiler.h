@@ -856,8 +856,14 @@ class CodeGenerator : public ASTVisitor {
       ++cnt;
     }
     VERIFY(cnt < 256);
-    AppendOp(Opcode::POPN);
-    AppendU8((uint8_t)cnt);
+    if (cnt != 0) {
+      if (cnt == 1) {
+        AppendOp(Opcode::POP);
+      } else {
+        AppendOp(Opcode::POPN);
+        AppendU8((uint8_t)cnt);
+      }
+    }
     ctx->var.pop();
   }
   [[noreturn]] void error_symbol_notfound(int row, int col,

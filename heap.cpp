@@ -18,6 +18,7 @@ class HeapImpl /*public: Heap --
                   不应该继承，否则Heap中调用函数时可能调用未被重写的函数*/
 {
   size_t m_usage;
+  size_t m_last_gc_usage;  //上次gc后
   uint8_t m_color;
   Object *m_true, *m_false;
   bool m_enable_gc;
@@ -28,21 +29,18 @@ class HeapImpl /*public: Heap --
   uint64_t m_object_count;
 
  public:
-  static void *RawAlloc(size_t size) {
-    void *p = malloc(size);
-    DBG_LOG("alloc %llu: %p\n", size, p);
-    return p;
-  }
-  static void RawFree(void *p) { free(p); }
-
   //用于为VS的堆分析提供类型参数
   template <class T>
   __declspec(allocator) T *AllocObject(size_t size) {
-    static_assert(std::is_base_of_v<Object, T>, "");
-    return (T *)RawAlloc(size);
+    static_assert(std::is_base_of_v<HeapObject, T>, "");
+    T *p = (T *)malloc(size);
+    m_usage += size;
+    p->m_alloc_size = size;
+    return p;
   }
   void Register(HeapObject *obj) {
     ++this->m_object_count;
+    obj->m_gctag = this->m_color;
     obj->m_nextobj = nullptr;
     this->m_objs.last->m_nextobj = obj;
     this->m_objs.last = obj;
@@ -62,16 +60,18 @@ class HeapImpl /*public: Heap --
        case HeapObjectType::FuncData: break;
        default: ASSERT(0);
      }*/
+    m_usage -= obj->m_alloc_size;
     --this->m_object_count;
-    RawFree(obj);
+    free(obj);
   }
 
   static HeapImpl *Create() {
-    HeapImpl *h = (HeapImpl *)RawAlloc(sizeof(HeapImpl));
+    HeapImpl *h = (HeapImpl *)malloc(sizeof(HeapImpl));
     h->m_color = 0;
     h->m_usage = 0;
     h->m_object_count = 0;
     h->m_enable_gc = false;
+    h->m_last_gc_usage = 1024;
 
     h->m_objs.first = h->m_objs.last =
         (HeapObject *)h->AllocObject<HeapObject>(sizeof(HeapObject));
@@ -123,7 +123,6 @@ class HeapImpl /*public: Heap --
   _p->m_heapobj_type = HeapObjectType::_t;          \
   _p->m_interface = &_t::Interface;                 \
   Register(_p);
-
 
   String *AllocString(const char *cstr, size_t length) {
     String *s = (String *)AllocObject<String>(sizeof(String) + length + 1);
@@ -199,6 +198,7 @@ class HeapImpl /*public: Heap --
 #define ALLOC_STRUCT_IMPL(_t)                \
   _t *p = (_t *)AllocObject<_t>(sizeof(_t)); \
   memset(p, 0, sizeof(_t));                  \
+  p->m_alloc_size = sizeof(_t);              \
   ALLOC_HEAPOBJECT(p, _t);                   \
   return p;
   VarData *AllocVarData() { ALLOC_STRUCT_IMPL(VarData); }
@@ -211,6 +211,7 @@ class HeapImpl /*public: Heap --
   uint64_t ObjectCount() { return this->m_object_count; }
   void DoGC() {
     if (!m_enable_gc) return;
+    size_t pre_gc_usage = m_usage;
     // return;  // NO_GC
     // DBG_LOG("begin gc\n");
     this->m_color = (this->m_color + 1) & 1;
@@ -246,12 +247,22 @@ class HeapImpl /*public: Heap --
     }
     // DBG_LOG("end sweep\n");
     // DBG_LOG("end gc\n");
+    DBG_LOG("gc complete: before:%llu after:%llu reduce:%lld\n", pre_gc_usage,
+            m_usage, pre_gc_usage - m_usage);
+    m_last_gc_usage = m_usage;
+  }
+  bool NeedGC() { return m_usage > m_last_gc_usage * 2; }
+  void PrintHeap() {
+    HeapObject *p = this->m_objs.first->m_nextobj;
+    while (p != nullptr) {
+      debug_print(stdout, p);
+      printf("\n");
+      p = p->m_nextobj;
+    }
   }
 };
 #define CALL_HEAP_IMPL(_f, ...) \
   (reinterpret_cast<HeapImpl *>(Global::GetHeap())->_f(__VA_ARGS__))
-void *Heap::RawAlloc(size_t size) { return HeapImpl::RawAlloc(size); }
-void Heap::RawFree(void *p) { return HeapImpl::RawFree(p); }
 
 Heap *Heap::Create() { return reinterpret_cast<Heap *>(HeapImpl::Create()); }
 
@@ -295,8 +306,10 @@ NativeObject *Heap::AllocNativeObject(void *data,
   return CALL_HEAP_IMPL(AllocNativeObject, data, interface);
 }
 uint64_t Heap::ObjectCount() { return CALL_HEAP_IMPL(ObjectCount); }
+void Heap::PrintHeap() { return CALL_HEAP_IMPL(PrintHeap); }
 void Heap::EnableGC() { return CALL_HEAP_IMPL(EnableGC); }
 void Heap::DoGC() { return CALL_HEAP_IMPL(DoGC); }
+bool Heap::NeedGC() { return CALL_HEAP_IMPL(NeedGC); }
 
 GCTracer::GCTracer(uint8_t color) : m_color(color) {}
 

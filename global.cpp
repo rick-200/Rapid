@@ -23,10 +23,11 @@ void Global::Init(GlobalData *data) {
     return;
   }
   global_data = (GlobalData *)malloc(sizeof(GlobalData));
-  ASSERT(global_data != nullptr);
+  VERIFY(global_data != nullptr);
   global_data->ref_cnt = 1;
   global_data->heap = Heap::Create();
   global_data->hsc = HandleContainer::Create();
+  HandleScope hs;
   global_data->cmz = CompilingMemoryZone::Create();
   global_data->exec = Executer::Create();
   Heap::EnableGC();

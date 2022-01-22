@@ -121,7 +121,12 @@ void test_compile(Handle<String> code) {
   Executer::RegisterModule(Factory::NewString("console"),
                            stdmodule::GetConsoleModule());
   Parameters param(nullptr, nullptr, 0);
+
+  std::chrono::high_resolution_clock::time_point t =
+      std::chrono::high_resolution_clock::now();
   Handle<Object> ret = Executer::CallFunction(sfd, param);
+  std::chrono::nanoseconds tt = std::chrono::high_resolution_clock::now() - t;
+  printf("%lldus.\n", tt.count() / 1000);
 }
 int main() {
   freopen("log.txt", "w", stderr);
@@ -130,11 +135,15 @@ int main() {
   fclose(f);
   buff[siz] = '\0';
   Engine::Init();
-  HandleScope hs;
-  Handle<String> code = Factory::NewString(buff);
 
-  CompilingMemoryZone::PrepareAlloc();
-  test_compile(code);
+  {
+    HandleScope hs;
+    Handle<String> code = Factory::NewString(buff);
+
+    CompilingMemoryZone::PrepareAlloc();
+    test_compile(code);
+  }
+  
   // HandleScope hs;
   // int64_t cnt = 0;
   // int64_t t = 0;
@@ -181,6 +190,8 @@ int main() {
   // arr->resize(0);
   // Handle<Object> s = Factory::NewString("123abc");
   Heap::DoGC();
+  Heap::PrintHeap();
+  printf("%llu\n", Heap::ObjectCount());
   // std::cout << s->cstr() << std::endl;
 
   return 0;

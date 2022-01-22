@@ -213,13 +213,24 @@ DEF_CMP_OP(NotEqual, !=);
   --top;
 #define EXEC_UNOP(_name) top[0] = _name(top[0]);
 
+Array *NewArray(size_t reserved) {
+  DEBUG_GC;
+  Array *arr = Heap::AllocArray(reserved);  // TODO: 处理AllocArray失败的情况
+  return arr;
+}
+Table *NewTable() {
+  DEBUG_GC;
+  Table *tb = Heap::AllocTable();  // TODO: 处理AllocTable失败的情况
+  return tb;
+}
+
 class ExecuterImpl : public Executer {
   ScriptStack m_stack;
   List<CallInfo> list_ci;
   Table *m_module;
   Exception *err;
   Object ***ptr_top;  //指向当前Execute栈上的top指针，用于在gc时确定边界
-#ifdef _DEBUG
+#if (DEBUG_LOG_EXEC_INFO)
   FILE *dbg_f;
 #endif
 
@@ -254,7 +265,7 @@ class ExecuterImpl : public Executer {
     new_ci.this_object = this_obj;
     list_ci.push(new_ci);
   }
-#ifdef _DEBUG
+#if (DEBUG_LOG_EXEC_INFO)
 
   void dbg_print_stack() {
     fprintf(dbg_f, "----------stack---------\n");
@@ -312,7 +323,7 @@ class ExecuterImpl : public Executer {
     }
 
     while (true) {
-#ifdef _DEBUG
+#if (DEBUG_LOG_EXEC_INFO)
       char buff[32];
       read_bytecode(pc, buff);
       fprintf(dbg_f, "---->exec: %s\n", buff);
@@ -362,7 +373,7 @@ class ExecuterImpl : public Executer {
         case Opcode::MAKE_ARRAY: {
           uint16_t cnt = *(uint16_t *)pc;
           pc += 2;
-          Array *arr = Heap::AllocArray(cnt);  // TODO: 处理AllocArray失败的情况
+          Array *arr = NewArray(cnt);
           for (Object **p = top - cnt + 1; p <= top; p++) {
             arr->push(*p);  //此处不会触发GC，否则arr未被保护，会被回收
           }
@@ -371,7 +382,7 @@ class ExecuterImpl : public Executer {
           break;
         }
         case Opcode::MAKE_ARRAY_0:
-          top[1] = Heap::AllocArray();  // TODO: 处理AllocArray失败的情况
+          top[1] = NewArray(0);
           ++top;
           break;
         case Opcode::ADD:
@@ -584,12 +595,16 @@ class ExecuterImpl : public Executer {
         default:
           ASSERT(0);
       }
-      IF_DEBUG(dbg_print_stack());
+#if (DEBUG_LOG_EXEC_INFO)
+      dbg_print_stack();
+#endif
     }
     goto l_return;
   l_to_begin:
     ptr_top = nullptr;
-    IF_DEBUG(dbg_print_stack());
+#if (DEBUG_LOG_EXEC_INFO)
+    dbg_print_stack();
+#endif
     goto l_begin;
   l_return:;
     ptr_top = nullptr;
@@ -652,13 +667,13 @@ class ExecuterImpl : public Executer {
 
  public:
   static ExecuterImpl *Create() {
-    ExecuterImpl *p = (ExecuterImpl *)Heap::RawAlloc(sizeof(ExecuterImpl));
+    ExecuterImpl *p = (ExecuterImpl *)malloc(sizeof(ExecuterImpl));
     p->ptr_top = nullptr;
     new (&p->m_stack) ScriptStack();
     new (&p->list_ci) List<CallInfo>();
     p->m_module = Factory::NewTable().ptr();
     p->err = nullptr;
-#ifdef _DEBUG
+#if (DEBUG_LOG_EXEC_INFO)
     p->dbg_f = fopen("./exec_log.txt", "w");
 #endif  // _DEBUG
     return p;

@@ -11,10 +11,10 @@ namespace internal {
 
 HandleContainer* HandleContainer::Create() {
   HandleContainer* p =
-      (HandleContainer*)Heap::RawAlloc(sizeof(HandleContainer));
+      (HandleContainer*)malloc(sizeof(HandleContainer));
   VERIFY(p != nullptr);
   p->m_size = 0;
-  p->m_top = (LocalSlotBlock*)Heap::RawAlloc(sizeof(LocalSlotBlock));
+  p->m_top = (LocalSlotBlock*)malloc(sizeof(LocalSlotBlock));
   p->m_top->pre = nullptr;
   p->m_top->slot[p->m_size++] = nullptr;  // == OpenScope
   p->m_g_first = nullptr;
@@ -26,11 +26,11 @@ void HandleContainer::Destory(HandleContainer* hsc) {}
 Object** HandleContainer::OpenLocalSlot(Object* val) {
   // ASSERT(val->IsHeapObject());
   if (val == nullptr) {
-    DBG_LOG("null");
+    DBG_LOG("null\n");
   }
   G_HC;
   if (_this->m_size == 256) {
-    LocalSlotBlock* p = (LocalSlotBlock*)Heap::RawAlloc(sizeof(LocalSlotBlock));
+    LocalSlotBlock* p = (LocalSlotBlock*)malloc(sizeof(LocalSlotBlock));
     p->pre = _this->m_top;
     _this->m_top = p;
     _this->m_size = 0;
@@ -56,7 +56,7 @@ void HandleContainer::CloseLocalScope() {
     }
     LocalSlotBlock* pdel = (_this->m_top);
     (_this->m_top) = (_this->m_top)->pre;
-    Heap::RawFree(pdel);
+    free(pdel);
     _this->m_size = 256;
     continue;
   }
@@ -64,7 +64,7 @@ void HandleContainer::CloseLocalScope() {
 
 void HandleContainer::OpenGlobalSlot(Object* val, Object*** handle_ref) {
   G_HC;
-  GlobalSlot* gs = (GlobalSlot*)Heap::RawAlloc(sizeof(GlobalSlot));
+  GlobalSlot* gs = (GlobalSlot*)malloc(sizeof(GlobalSlot));
   gs->obj = val;
   gs->handle_ref = handle_ref;
   gs->nxt = gs->pre = nullptr;
@@ -88,7 +88,7 @@ void HandleContainer::CloseGlobalSlot(Object** location) {
     if (gs->nxt != nullptr) gs->nxt->pre = gs->pre;
   }
   *gs->handle_ref = nullptr;
-  Heap::RawFree(gs);
+  free(gs);
 }
 
 void HandleContainer::MakeWeak(Object** location,

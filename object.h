@@ -87,7 +87,7 @@ typedef intptr_t Address;
       get_property, set_property, invoke_memberfunc, invoke_metafunction, \
       trace_ref};
 
-enum class HeapObjectType {
+enum class HeapObjectType : uint8_t {
   UNKNOWN_TYPE,
   String,
   FixedArray,
@@ -210,6 +210,8 @@ class FunctionData;
 class HeapObject : public Object {
  private:
   friend class Object;
+  // TODO: 把m_alloc_size，m_heapobj_type，m_gctag合并以节省空间
+  size_t m_alloc_size;  //对象占用内存大小字节数
   HeapObjectType m_heapobj_type;
   uint8_t m_gctag;
   HeapObject *m_nextobj;
@@ -492,10 +494,10 @@ class FixedTable : public HeapObject {
  public:
   static void trace_ref(Object *obj, GCTracer *gct) {
     FixedTable *_this = FixedTable::cast(obj);
-    for (TableNode *p = _this->m_data; p < _this->m_pfree; p++) {
-      if (p->key != nullptr) {
-        gct->Trace(p->key);
-        gct->Trace(p->val);
+    for (size_t i = 0; i < _this->m_size; i++) {
+      if (_this->m_data[i].key != nullptr) {
+        gct->Trace(_this->m_data[i].key);
+        gct->Trace(_this->m_data[i].val);
       }
     }
   }
@@ -652,7 +654,7 @@ class Array : public HeapObject {
   void resize(size_t new_len) {
     if (new_len > m_length) {
       reserve(new_len);
-      //Object *null_v = Heap::NullValue();
+      // Object *null_v = Heap::NullValue();
       for (size_t i = m_length; i < new_len; i++) m_array->set(i, nullptr);
       m_length = new_len;
     } else if (new_len < m_length) {
@@ -791,7 +793,7 @@ class Struct : public HeapObject {
     gct->TraceAll(__VA_ARGS__);                       \
   }
 #define _M(_m) _this->_m
-
+#define _M_C(_m) this->_m = nullptr;
 class VarData : public Struct {
  public:
   String *name;
@@ -799,7 +801,7 @@ class VarData : public Struct {
 
  private:
   DECL_TRACEREF(VarData, _M(name));
-
+  
  public:
   OBJECT_DEF(VarData)
   DEF_CAST(VarData)

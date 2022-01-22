@@ -107,7 +107,7 @@ void debug_print(FILE* f, Object* obj) {
   } else if (obj->IsTable()) {
     fprintf(f, "<table>");
   } else if (obj->IsFixedTable()) {
-    fprintf(f, "<finedtable>");
+    fprintf(f, "<fixedtable>");
   } else if (obj->IsFunctionData()) {
     fprintf(f, "<funcdata>%p:%s@%p", FunctionData::cast(obj),
             FunctionData::cast(obj)->shared_data->name->cstr(),
@@ -118,6 +118,8 @@ void debug_print(FILE* f, Object* obj) {
             SharedFunctionData::cast(obj));
   } else if (obj->IsNativeObject()) {
     fprintf(f, "<native_obj>%p", NativeObject::cast(obj));
+  } else if (obj->IsStruct()) {
+    fprintf(f, "<struct>");
   } else {
     fprintf(f, "<unknown>");
   }

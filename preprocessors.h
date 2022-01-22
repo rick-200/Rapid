@@ -4,7 +4,8 @@
 #include <new>
 static_assert(sizeof(void*) == 8, "当前只能在64位机器上使用！");
 
-#define DEBUG_ALWAYS_GC 1
+#define DEBUG_ALWAYS_GC 0
+#define DEBUG_LOG_EXEC_INFO 0
 
 #define ASSUME(exp) __assume(exp)
 
@@ -13,11 +14,15 @@ static_assert(sizeof(void*) == 8, "当前只能在64位机器上使用！");
 #define ASSERT(exp) assert(exp)
 // VERIFY为开发中暂时使用，后期全部换成错误处理
 #define VERIFY(exp) assert(exp)
+
 #else
 #define ASSERT(exp) ASSUME(exp)
-#define IF_DEBUG(...) 
+#define IF_DEBUG(...)
 // VERIFY为开发中暂时使用，后期全部换成错误处理
-#define VERIFY(exp) abort()
+#define VERIFY(exp) \
+  if (!(exp)) {     \
+    abort();        \
+  }
 #endif
 
 

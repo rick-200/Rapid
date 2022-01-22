@@ -24,9 +24,9 @@ struct ObjectInterface;
 注意：Heap的Alloc函数都不会触发GC，若没有可分配内存，TODO:返回nullptr
 */
 class Heap : public StaticClass {
- public:
-  static void *RawAlloc(size_t size);
-  static void RawFree(void *p);
+ //public:
+ // static void *RawAlloc(size_t size);
+ // static void RawFree(void *p);
 
  public:
   static Heap *Create();
@@ -52,11 +52,13 @@ class Heap : public StaticClass {
                                          const ObjectInterface *interface);
 
   static uint64_t ObjectCount();
+  static void PrintHeap();
   //所有Global对象创建完毕后，调用此函数允许GC
   static void EnableGC();
 
  public:
   static void DoGC();
+  static bool NeedGC();
 };
 
 class GCTracer {
