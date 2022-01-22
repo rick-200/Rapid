@@ -218,9 +218,9 @@ Array *NewArray(size_t reserved) {
   Array *arr = Heap::AllocArray(reserved);  // TODO: 处理AllocArray失败的情况
   return arr;
 }
-Table *NewTable() {
+Table *NewTable(size_t reserved) {
   DEBUG_GC;
-  Table *tb = Heap::AllocTable();  // TODO: 处理AllocTable失败的情况
+  Table *tb = Heap::AllocTable(reserved);  // TODO: 处理AllocTable失败的情况
   return tb;
 }
 
@@ -373,16 +373,27 @@ class ExecuterImpl : public Executer {
         case Opcode::MAKE_ARRAY: {
           uint16_t cnt = *(uint16_t *)pc;
           pc += 2;
-          Array *arr = NewArray(cnt);
-          for (Object **p = top - cnt + 1; p <= top; p++) {
-            arr->push(*p);  //此处不会触发GC，否则arr未被保护，会被回收
-          }
+          Array *arr = NewArray(cnt);  //此函数可能触发GC，此之前top不能变
           top -= cnt - 1;
+          arr->quick_init(top, cnt);
           top[0] = arr;
           break;
         }
         case Opcode::MAKE_ARRAY_0:
           top[1] = NewArray(0);
+          ++top;
+          break;
+        case Opcode::MAKE_TABLE: {
+          uint16_t cnt = *(uint16_t *)pc;
+          pc += 2;
+          Table *tb = NewTable(cnt);  //此函数可能触发GC，此之前top不能变
+          top -= cnt * 2 - 1;
+          tb->quick_init(top, cnt);
+          top[0] = tb;
+          break;
+        }
+        case Opcode::MAKE_TABLE_0:
+          top[1] = NewTable(4);
           ++top;
           break;
         case Opcode::ADD:

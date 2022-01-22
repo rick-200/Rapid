@@ -356,13 +356,19 @@ class TableIterator {
 
  private:
   TableIterator(const TableNode *begin, const TableNode *end)
-      : m_p(begin), m_end(end) {}
+      : m_p(begin), m_end(end) {
+    if (m_p->key == nullptr) next();
+  }
 
  public:
   TableIterator(const TableIterator &) = default;
   bool is_end() { return m_p == m_end; }
   void next() {
-    if (!is_end()) ++m_p;
+    if (!is_end()) {
+      do {
+        ++m_p;
+      } while (m_p->key == nullptr);
+    }
   }
   String *key() { return m_p->key; }
   Object *value() { return m_p->val; }
@@ -412,6 +418,7 @@ class FixedTable : public HeapObject {
         if (String::Equal(p->key, key)) return p;
         p = p->next;
       }
+      if (String::Equal(p->key, key)) return p;
       if (!has_free()) return nullptr;
       p->next = new_node();
       p->next->key = key;
@@ -489,7 +496,9 @@ class FixedTable : public HeapObject {
       if (p->key != nullptr) other->find_or_create_node(p->key)->val = p->val;
     }
   }
-  TableIterator get_iterator() { return TableIterator(m_data, m_pfree); }
+  TableIterator get_iterator() {
+    return TableIterator(m_data, m_data + m_size);
+  }
 
  public:
   static void trace_ref(Object *obj, GCTracer *gct) {
@@ -664,6 +673,14 @@ class Array : public HeapObject {
   }
   Object **begin() { return m_array->begin(); }
   Object **end() { return m_array->begin() + m_length; }
+  void quick_init(Object **params, size_t count) {
+    ASSERT(m_length == 0);
+    ASSERT(capacity() >= count);
+    m_length = count;
+    for (size_t i = 0; i < count; i++) {
+      m_array->set(i, params[i]);
+    }
+  }
 
  private:
   static Object *get_property(Object *obj, String *name, AccessSpecifier spec) {
@@ -719,6 +736,18 @@ class Table : public HeapObject {
     ASSERT(!x->IsFailure());
     return x;
   }
+
+  //仅用于MAKE_TABLE指令创建表时填入初始数据
+  void quick_init(Object **params, size_t count) {
+    ASSERT(m_table->used() == 0);
+    ASSERT(count * 2 <= m_table->size());
+    while (count--) {
+      Object *x = m_table->set(String::cast(params[0]), params[1], true);
+      ASSERT(!x->IsFailure());
+      params += 2;
+    }
+  }
+
   Object *remove(String *key) {
     Object *obj = m_table->remove(key);
     try_rehash_shrink();
@@ -730,6 +759,12 @@ class Table : public HeapObject {
     gct->Trace(_this->m_table);
   }
   TableIterator get_iterator() { return m_table->get_iterator(); }
+
+ private:
+  static Object *invoke_metafunction(Object *obj, MetaFunctionID id,
+                                     const Parameters &params);
+  static Object *invoke_memberfunc(Object *obj, String *name,
+                                   const Parameters &params);
 
  public:
   OBJECT_DEF(Table)
@@ -801,7 +836,7 @@ class VarData : public Struct {
 
  private:
   DECL_TRACEREF(VarData, _M(name));
-  
+
  public:
   OBJECT_DEF(VarData)
   DEF_CAST(VarData)

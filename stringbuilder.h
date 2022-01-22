@@ -13,7 +13,7 @@ public:
     return Factory::NewString(m_v.begin(), m_v.size());
   }
   template <typename... TArgs>
-  StringBuilder &AppendFormat(const char *fmt, TArgs... args) {
+  StringBuilder &AppendFormat(const char *fmt, const TArgs&... args) {
     size_t len = snprintf(nullptr, 0, fmt, args...);
     size_t siz = m_v.size();
     m_v.resize(siz + len + 1);

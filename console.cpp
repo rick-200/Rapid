@@ -44,6 +44,8 @@ void print_one(Object* obj, bool first = false) {
       }
       printf("'%s': ", it.key()->cstr());
       print_one(it.value());
+      it.next();
+      if (it.is_end()) break;
       printf(", ");
     }
     printf("}");

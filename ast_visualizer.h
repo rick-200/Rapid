@@ -233,6 +233,18 @@ class VisualizerVisitor : public ASTVisitor {
     }
     ret = mk_a;
   }
+  virtual void VisitTableExpr(TableExpr *p) {
+    DefNode("mk_table");
+    int mk_t = ret;
+    for (size_t i = 0; i < p->params.size(); i++) {
+      DefNode(p->params[i].key);
+      Connect(mk_t, ret);
+      int k = ret;
+      Visit(p->params[i].value);
+      Connect(k, ret);
+    }
+    ret = mk_t;
+  }
 };
 
 inline Handle<String> VisualizeAST(AstNode *node) {

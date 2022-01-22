@@ -1,6 +1,19 @@
 var console = import("console");
+var tb={
+    "aaa":1,
+    bbb:2
+};
+tb["ccc"]=3;
+tb["bbb"]=4;
+console.print(tb);
+/*
+var arr = [];
+for(var i=0;i<100;i+=1)
+    arr.push(i);
+console.print(arr);*/
 /*for(var i=0;i<100000000;i+=1){}*/
 
+/*
 func add(a,b){
     var xxx=[123];
     return a+b;
@@ -8,6 +21,7 @@ func add(a,b){
 for(var i=0;i<10000;i+=1){
 var test_gc=[1,2,3,4,add(5,6)];
 }
+*/
 
 /*
 var console=import("console");

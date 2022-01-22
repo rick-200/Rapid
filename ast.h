@@ -91,7 +91,8 @@ class ZoneList {
   V(IndexExpr)          \
   V(UnaryExpr)          \
   V(BinaryExpr)         \
-  V(AssignExpr) V(CallExpr) V(ThisExpr) V(ParamsExpr) V(ImportExpr) V(ArrayExpr)
+  V(AssignExpr)         \
+  V(CallExpr) V(ThisExpr) V(ParamsExpr) V(ImportExpr) V(ArrayExpr) V(TableExpr)
 
 enum class AstNodeType {
 #define AstNodeType_ITER(t) t,
@@ -178,11 +179,19 @@ struct CallExpr : public Expression {
 struct ArrayExpr : public Expression {
   ZoneList<Expression *> params;
 };
+struct TableParamPair {
+  Handle<String> key;
+  Expression *value;
+};
+struct TableExpr : public Expression {
+  ZoneList<TableParamPair> params;
+};
 struct AssignExpr : public Expression {
   AssignableExpr *left;
   Expression *right;
   TokenType opt;
 };
+
 
 inline bool IsAssignableExpr(AstNode *node) {
   switch (node->type) {

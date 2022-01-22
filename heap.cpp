@@ -67,6 +67,7 @@ class HeapImpl /*public: Heap --
 
   static HeapImpl *Create() {
     HeapImpl *h = (HeapImpl *)malloc(sizeof(HeapImpl));
+    VERIFY(h != nullptr);
     h->m_color = 0;
     h->m_usage = 0;
     h->m_object_count = 0;
@@ -141,9 +142,9 @@ class HeapImpl /*public: Heap --
     ALLOC_HEAPOBJECT(p, Array);
     return p;
   }
-  Table *AllocTable() {
+  Table *AllocTable(size_t reserve) {
     Table *p = (Table *)AllocObject<Table>(sizeof(Table));
-    p->m_table = AllocFixedTable(8);
+    p->m_table = AllocFixedTable(reserve * 2);
     ALLOC_HEAPOBJECT(p, Table);
     return p;
   }
@@ -274,7 +275,9 @@ String *Heap::AllocString(const char *cstr, size_t length) {
 Array *Heap::AllocArray(size_t reserved) {
   return CALL_HEAP_IMPL(AllocArray, reserved);
 }
-Table *Heap::AllocTable() { return CALL_HEAP_IMPL(AllocTable); }
+Table *Heap::AllocTable(size_t reserved) {
+  return CALL_HEAP_IMPL(AllocTable, reserved);
+}
 FixedArray *Heap::AllocFixedArray(size_t length) {
   return CALL_HEAP_IMPL(AllocFixedArray, length);
 }

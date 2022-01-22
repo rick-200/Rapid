@@ -188,7 +188,6 @@ l_begin_switch:
     case '"':
       ReadTokenString();
       break;
-
     case '0':
     case '1':
     case '2':
@@ -943,6 +942,21 @@ void CodeGenerator::VisitArrayExpr(ArrayExpr *p) {
     AppendOp(Opcode::MAKE_ARRAY);
     AppendU16((uint16_t)p->params.size());
     pop(p->params.size() - 1);
+  }
+}
+
+void CodeGenerator::VisitTableExpr(TableExpr *p) {
+  if (p->params.size() == 0) {
+    AppendOp(Opcode::MAKE_TABLE_0);
+    push();
+  } else {
+    for (size_t i = 0; i < p->params.size(); i++) {
+      LoadK(p->params[i].key);
+      Visit(p->params[i].value);
+    }
+    AppendOp(Opcode::MAKE_TABLE);
+    AppendU16((uint16_t)p->params.size());
+    pop(p->params.size() * 2 - 1);
   }
 }
 

@@ -30,8 +30,11 @@ enum class Opcode : uint8_t {
   POP,
   POPN,  // pop n个，u8
 
-  MAKE_ARRAY,  // u16
+  MAKE_ARRAY,    // u16
   MAKE_ARRAY_0,  // 0
+
+  MAKE_TABLE,    // u16
+  MAKE_TABLE_0,  // 0
 
   ADD,
   SUB,
@@ -116,6 +119,7 @@ enum class TokenType {
   COMMA,
   DOT,
   SEMI,
+  COLON,
 
   ADD,  //既代表二元加法，又代表一元‘正’
   SUB,  //既代表二元减法，又代表一元‘负’
@@ -182,7 +186,7 @@ enum class TokenType {
   V(TokenType::BK_LR, "}") \
   V(TokenType::COMMA, ",") \
   V(TokenType::DOT, ".")   \
-  V(TokenType::SEMI, ";")
+  V(TokenType::SEMI, ";") V(TokenType::COLON, ":")
 
 #define TT_ITER_OPERATOR(V)        \
   V(TokenType::ADD, "+")           \
@@ -284,6 +288,8 @@ inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
     CASE_u16(STOREE);
     CASE_u16(MAKE_ARRAY);
     CASE_0(MAKE_ARRAY_0);
+    CASE_u16(MAKE_TABLE);
+    CASE_0(MAKE_TABLE_0);
     CASE_0(IMPORT);
     CASE_0(LOAD_THIS);
     CASE_0(LOAD_PARAMS);

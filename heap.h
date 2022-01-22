@@ -24,9 +24,9 @@ struct ObjectInterface;
 注意：Heap的Alloc函数都不会触发GC，若没有可分配内存，TODO:返回nullptr
 */
 class Heap : public StaticClass {
- //public:
- // static void *RawAlloc(size_t size);
- // static void RawFree(void *p);
+  // public:
+  // static void *RawAlloc(size_t size);
+  // static void RawFree(void *p);
 
  public:
   static Heap *Create();
@@ -35,7 +35,7 @@ class Heap : public StaticClass {
  public:  //以下函数不会调用GC
   static String *AllocString(const char *cstr, size_t length);
   static Array *AllocArray(size_t reserved = 0);
-  static Table *AllocTable();
+  static Table *AllocTable(size_t reserved = 4);
   static FixedArray *AllocFixedArray(size_t length);
   static FixedTable *AllocFixedTable(size_t size);
   static InstructionArray *AllocInstructionArray(size_t length);

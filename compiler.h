@@ -218,7 +218,7 @@ inline bool basic_obj_equal(Object *a, Object *b) {
 
 class BinopParserParam {
   uint64_t val;
-  static_assert((int)TokenType::__SIZE < 64);
+  static_assert((int)TokenType::__SIZE <= 64);
 
  public:
   constexpr BinopParserParam(const std::initializer_list<TokenType> &list)
@@ -262,6 +262,14 @@ class Parser {
     Executer::ThrowException(e);
     has_error = true;
   }
+  template <class... TArgs>
+  void syntax_error_format(int row, int col, const char *fmt,
+                           const TArgs &...args) {
+    StringBuilder sb;
+    sb.AppendFormat("syntax_error(%d,%d): ", row, col);
+    sb.AppendFormat(fmt, args...);
+    syntax_error(row, col, sb.ToString());
+  }
   void syntax_error(int row, int col, TokenType now, TokenType need) {
     StringBuilder sb;
     const char *now_s = tokentype_tostr(now);
@@ -280,6 +288,21 @@ class Parser {
   void unexpected(TokenType need = TokenType::NUL) {
     syntax_error(m_ts->peek().row, m_ts->peek().col, m_ts->peek().t, need);
   }
+  // void syntax_error(int row, int col, TokenType now, TokenType need) {
+  //  StringBuilder sb;
+  //  const char *now_s = tokentype_tostr(now);
+  //  ASSERT(now_s);
+  //  const char *need_s = tokentype_tostr(need);
+  //  sb.AppendFormat("syntax_error(%d,%d):", row, col);
+  //  if (now_s != nullptr) {
+  //    sb.AppendFormat(" unexpected token<%s>", now_s);
+  //  }
+  //  if (need_s != nullptr) {
+  //    if (now_s != nullptr) sb.AppendChar(',');
+  //    sb.AppendFormat(" token<%s> needed", need_s);
+  //  }
+  //  return syntax_error(row, col, sb.ToString());
+  //}
 
  private:
 #define TK m_ts->peek()
@@ -336,10 +359,11 @@ class Parser {
         CONSUME;
         return AllocImportExpr(ALLOC_PARAM);
       }
-      case TokenType::BK_ML: {//[
+      case TokenType::BK_ML: {  //[
         CONSUME;
         ArrayExpr *ae = AllocArrayExpr(ALLOC_PARAM);
         if (TK.t == TokenType::BK_MR) {
+          CONSUME;
           return ae;
         }
         while (true) {
@@ -348,7 +372,7 @@ class Parser {
           ae->params.push(exp);
           if (TK.t == TokenType::COMMA) {
             CONSUME;
-          }//无else，允许最后有一个多余的逗号
+          }  //无else，允许最后有一个多余的逗号
           if (TK.t == TokenType::BK_MR) {
             CONSUME;
             break;
@@ -356,13 +380,42 @@ class Parser {
         }
         return ae;
       }
+      case TokenType::BK_LL: {  //{
+        CONSUME;
+        TableExpr *te = AllocTableExpr(ALLOC_PARAM);
+        if (TK.t == TokenType::BK_LR) {
+          CONSUME;
+          return te;
+        }
+        while (true) {
+          TableParamPair tp;
+          if (TK.t != TokenType::SYMBOL &&
+              (TK.t != TokenType::KVAL || !TK.v->IsString())) {
+            syntax_error_format(
+                TK.row, TK.col,
+                "need symbol or string literial in table construction.");
+            return nullptr;
+          }
+          tp.key = Handle<String>::cast(TK.v);
+          CONSUME;
+          REQUIRE(TokenType::COLON);
+          tp.value = ParseExpression();
+          CHECK_OK(tp.value);
+          te->params.push(tp);
+          if (TK.t == TokenType::COMMA) {
+            CONSUME;
+          } 
+          if (TK.t == TokenType::BK_LR) {
+            CONSUME;
+            break;
+          }
+        }
+        return te;
+      }
     }
-    StringBuilder sb;
-    const char *now_t = tokentype_tostr(TK.t);
-    sb.AppendFormat(
-        "syntax_error(%d,%d): unexpected token %s, incomplete expression.",
-        TK.row, TK.col, now_t);
-    syntax_error(TK.row, TK.col, sb.ToString());
+    syntax_error_format(TK.row, TK.col,
+                        "unexpected token %s, incomplete expression.",
+                        tokentype_tostr(TK.t));
     return nullptr;
   }
   Expression *ParseUnary() {
@@ -983,6 +1036,7 @@ class CodeGenerator : public ASTVisitor {
   virtual void VisitParamsExpr(ParamsExpr *node) override;
   virtual void VisitImportExpr(ImportExpr *node) override;
   virtual void VisitArrayExpr(ArrayExpr *node) override;
+  virtual void VisitTableExpr(TableExpr *node) override;
 };
 
 }  // namespace internal

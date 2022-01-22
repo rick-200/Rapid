@@ -14,21 +14,21 @@ void Array::change_capacity(size_t new_cap) {
 Object* Array::invoke_metafunction(Object* obj, MetaFunctionID id,
                                    const Parameters& params) {
   Array* _this = Array::cast(obj);
+  const RawParameters& rp = params;
+
   if (id == MetaFunctionID::GET_INDEX) {
-    ASSERT(params.count() == 1 && params[0]->IsInteger());
-    int64_t pos = Integer::cast(params[0].ptr())->value();
+    ASSERT(rp.count() == 1 && rp[0]->IsInteger());
+    int64_t pos = Integer::cast(rp[0])->value();
     if (pos < 0 || pos >= _this->length()) VERIFY(0);
     return _this->get(pos);
   } else if (id == MetaFunctionID::SET_INDEX) {
-    ASSERT(params.count() == 2 && params[0]->IsInteger());
-    int64_t pos = Integer::cast(params[0].ptr())->value();
+    ASSERT(rp.count() == 2 && rp[0]->IsInteger());
+    int64_t pos = Integer::cast(rp[0])->value();
     if (pos < 0 || pos >= _this->length()) VERIFY(0);
-    _this->set(pos, params[1].ptr());
+    _this->set(pos, rp[1]);
     return nullptr;
-  } else {
-    return Failure::NotImplemented;
   }
-  return nullptr;
+  return Failure::NotImplemented;
 }
 Object* Array::invoke_memberfunc(Object* obj, String* name,
                                  const Parameters& params) {
@@ -45,7 +45,7 @@ Object* Array::invoke_memberfunc(Object* obj, String* name,
   }
   return Failure::NotImplemented;
 }
-//---------------------------------------------------------
+// Table implement-------------------------------------------------------
 
 void Table::rehash_expand() {
   Handle<FixedTable> h = Factory::NewFixedTable(m_table->size() << 1);
@@ -60,6 +60,33 @@ void Table::try_rehash_shrink() {
   m_table = h.ptr();
 }
 
+Object* Table::invoke_metafunction(Object* obj, MetaFunctionID id,
+                                   const Parameters& params) {
+  Table* _this = Table::cast(obj);
+  const RawParameters& rp = params;
+  if (id == MetaFunctionID::GET_INDEX) {
+    ASSERT(rp.count() == 1 && rp[0]->IsString());
+    return _this->get(String::cast(rp[0]));
+  } else if (id == MetaFunctionID::SET_INDEX) {
+    ASSERT(rp.count() == 2 && rp[0]->IsString());
+    _this->set(String::cast(rp[0]), rp[1]);
+    return nullptr;
+  }
+  return Failure::NotImplemented;
+}
+
+Object* Table::invoke_memberfunc(Object* obj, String* name,
+                                 const Parameters& params) {
+  return Failure::NotImplemented;
+
+  //Table* _this = Table::cast(obj);
+  //const RawParameters& rp = params;
+  //if (String::Equal(name, "size")) {
+  //  if (rp.count() != 0) VERIFY(0);
+  //}
+  //return nullptr;
+}
+//----------------------------------------------------------------
 Object* Object::get_property(Object* obj, String* name, AccessSpecifier spec) {
   return Failure::NotImplemented;
 }
