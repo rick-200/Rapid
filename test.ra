@@ -1,4 +1,14 @@
 var console = import("console");
+var a=1,b=0.1;
+try{
+    a = a & b;
+    console.print("a", a);
+}catch(e){
+    console.print("error",e);
+}finally{
+    console.print("finally");
+}
+/*
 var tb={
     "aaa":1,
     bbb:2
@@ -6,6 +16,7 @@ var tb={
 tb["ccc"]=3;
 tb["bbb"]=4;
 console.print(tb);
+*/
 /*
 var arr = [];
 for(var i=0;i<100;i+=1)

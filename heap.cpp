@@ -189,6 +189,7 @@ class HeapImpl /*public: Heap --
     p->m_type = type;
     p->m_info = info;
     p->m_data = data;
+    p->m_stacktrace = AllocArray(0);
     ALLOC_HEAPOBJECT(p, Exception);
     return p;
   }
@@ -202,13 +203,16 @@ class HeapImpl /*public: Heap --
   p->m_alloc_size = sizeof(_t);              \
   ALLOC_HEAPOBJECT(p, _t);                   \
   return p;
-  VarData *AllocVarData() { ALLOC_STRUCT_IMPL(VarData); }
-  ExternVarData *AllocExternVarData() { ALLOC_STRUCT_IMPL(ExternVarData); }
-  SharedFunctionData *AllocSharedFunctionData() {
-    ALLOC_STRUCT_IMPL(SharedFunctionData);
-  }
-  ExternVar *AllocExternVar() { ALLOC_STRUCT_IMPL(ExternVar); }
-  FunctionData *AllocFunctionData() { ALLOC_STRUCT_IMPL(FunctionData); }
+#define ITERATOR_DEF_ALLOC_STRUCT(T) \
+  T *Alloc##T() { ALLOC_STRUCT_IMPL(T); }
+  ITER_STRUCT_DERIVED(ITERATOR_DEF_ALLOC_STRUCT)
+  //VarData *AllocVarData() { ALLOC_STRUCT_IMPL(VarData); }
+  //ExternVarData *AllocExternVarData() { ALLOC_STRUCT_IMPL(ExternVarData); }
+  //SharedFunctionData *AllocSharedFunctionData() {
+  //  ALLOC_STRUCT_IMPL(SharedFunctionData);
+  //}
+  //ExternVar *AllocExternVar() { ALLOC_STRUCT_IMPL(ExternVar); }
+  //FunctionData *AllocFunctionData() { ALLOC_STRUCT_IMPL(FunctionData); }
   uint64_t ObjectCount() { return this->m_object_count; }
   void DoGC() {
     if (!m_enable_gc) return;
@@ -294,6 +298,9 @@ Exception *Heap::AllocException(String *type, String *info, Object *data) {
   return CALL_HEAP_IMPL(AllocExpection, type, info, data);
 }
 VarData *Heap::AllocVarData() { return CALL_HEAP_IMPL(AllocVarData); }
+TryCatchTable *Heap::AllocTryCatchTable() {
+  return CALL_HEAP_IMPL(AllocTryCatchTable);
+}
 ExternVarData *Heap::AllocExternVarData() {
   return CALL_HEAP_IMPL(AllocExternVarData);
 }

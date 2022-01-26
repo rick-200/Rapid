@@ -143,6 +143,24 @@ class VisualizerVisitor : public ASTVisitor {
   }
   virtual void VisitBreakStat(BreakStat *node) { DefNode("break"); }
   virtual void VisitContinueStat(ContinueStat *node) { DefNode("continue"); }
+  virtual void VisitTryCatchStat(TryCatchStat *node) {
+    DefNode("try");
+    int try_ = ret;
+    DefNode("catch");
+    int catch_ = ret;
+    Visit(node->try_);
+    Connect(try_, ret);
+    Visit(node->catch_);
+    Connect(catch_, ret);
+    Connect(try_, catch_);
+    if (node->finally_ != nullptr) {
+      DefNode("finally");
+      int finally_ = ret;
+      Connect(try_, finally_);
+      Visit(node->finally_);
+      Connect(finally_, ret);
+    }
+  }
   virtual void VisitVarExpr(VarExpr *node) { DefNode(node->name->cstr()); }
   virtual void VisitMemberExpr(MemberExpr *node) {
     DefNode(".");

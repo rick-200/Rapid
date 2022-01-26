@@ -107,6 +107,8 @@ enum class TokenType {
   CONST,
   TRY,
   CATCH,
+  FINALLY,
+  THROW,
   THIS,
   PARAMS,
 

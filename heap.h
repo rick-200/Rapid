@@ -20,7 +20,9 @@ class InstructionArray;
 class Exception;
 class NativeObject;
 struct ObjectInterface;
-/*
+class TryCatchTable;
+class StackTraceData;
+    /*
 注意：Heap的Alloc函数都不会触发GC，若没有可分配内存，TODO:返回nullptr
 */
 class Heap : public StaticClass {
@@ -44,10 +46,12 @@ class Heap : public StaticClass {
   static Object *FalseValue();
   static Exception *AllocException(String *type, String *info, Object *data);
   static VarData *AllocVarData();
+  static TryCatchTable *AllocTryCatchTable();
   static ExternVarData *AllocExternVarData();
   static SharedFunctionData *AllocSharedFunctionData();
   static ExternVar *AllocExternVar();
   static FunctionData *AllocFunctionData();
+  static StackTraceData *AllocStackTraceData();
   static NativeObject *AllocNativeObject(void *data,
                                          const ObjectInterface *interface);
 

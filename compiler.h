@@ -217,17 +217,25 @@ inline bool basic_obj_equal(Object *a, Object *b) {
 //};
 
 class BinopParserParam {
-  uint64_t val;
-  static_assert((int)TokenType::__SIZE <= 64);
+  uint64_t val_0, val_1;
+  static_assert((int)TokenType::__SIZE <= 128);
 
  public:
   constexpr BinopParserParam(const std::initializer_list<TokenType> &list)
-      : val(0) {
+      : val_0(0), val_1(0) {
     for (auto t : list) {
-      val |= (1ULL << (int)t);
+      if (static_cast<int>(t) < 64) {
+        val_0 |= (1ULL << static_cast<int>(t));
+      } else {
+        val_1 |= (1ULL << (static_cast<int>(t) - 64));
+      }
     }
   }
-  bool test(TokenType t) const { return (val >> (int)t) & 1; }
+  bool test(TokenType t) const {
+    return static_cast<int>(t) < 64
+               ? ((val_0 >> static_cast<int>(t)) & 1)
+               : ((val_1 >> (static_cast<int>(t) - 64)) & 1);
+  }
 };
 
 // constexpr BinopParserParam bpp = {TokenType::ADD};
@@ -314,7 +322,7 @@ class Parser {
       return nullptr; \
     }                 \
     CONSUME;          \
-  } while (0)
+  } while (false)
 #define UNEXPECTED_IF(_exp) \
   if (_exp) {               \
     unexpected();           \
@@ -404,7 +412,7 @@ class Parser {
           te->params.push(tp);
           if (TK.t == TokenType::COMMA) {
             CONSUME;
-          } 
+          }
           if (TK.t == TokenType::BK_LR) {
             CONSUME;
             break;
@@ -670,6 +678,29 @@ class Parser {
     if (need_semi) REQUIRE(TokenType::SEMI);
     return p;
   }
+  TryCatchStat *ParseTryCatchStat() {
+    TryCatchStat *p = AllocTryCatchStat(ALLOC_PARAM);
+    REQUIRE(TokenType::TRY);
+    p->try_ = ParseBlock();
+    CHECK_OK(p->try_);
+    REQUIRE(TokenType::CATCH);
+    REQUIRE(TokenType::BK_SL);
+    NEED_CHECK(TokenType::SYMBOL);
+    p->err_var_name = Handle<String>::cast(TK.v);
+    CONSUME;
+    REQUIRE(TokenType::BK_SR);
+    p->catch_ = ParseBlock();
+    CHECK_OK(p->catch_);
+    if (TK.t == TokenType::FINALLY) {
+      CONSUME;
+      p->finally_ = ParseBlock();
+      CHECK_OK(p->finally_);
+    } else {
+      p->finally_ = nullptr;
+    }
+    return p;
+  }
+
   Statement *TryParseStatement() {
   l_begin:
     switch (TK.t) {
@@ -693,6 +724,8 @@ class Parser {
         return ParseFunctionDecl();
       case TokenType::VAR:
         return ParseVarDecl();
+      case TokenType::TRY:
+        return ParseTryCatchStat();
       case TokenType::BK_LL:  //{
         return ParseBlock();
       case TokenType::SEMI:
@@ -763,6 +796,10 @@ struct ExtVarCtx {
   Handle<String> name;
   uint16_t pos;
 };
+struct TryCatchCtx {
+  uint32_t begin;
+  uint32_t end;
+};
 struct FunctionCtx {
   Handle<String> name;
   ZoneList<VarCtx> allvar;
@@ -771,6 +808,7 @@ struct FunctionCtx {
   ZoneList<Handle<Object>> kpool;
   ZoneList<FunctionCtx *> inner_func;
   ZoneList<uint8_t> cmd;
+  ZoneList<TryCatchCtx> try_catch;
   size_t top;
   size_t max_stack;
   size_t param_cnt;
@@ -1024,6 +1062,7 @@ class CodeGenerator : public ASTVisitor {
   virtual void VisitReturnStat(ReturnStat *node) override;
   virtual void VisitBreakStat(BreakStat *node) override;
   virtual void VisitContinueStat(ContinueStat *node) override;
+  virtual void VisitTryCatchStat(TryCatchStat *node) override;
   virtual void VisitVarExpr(VarExpr *node) override;
   virtual void VisitMemberExpr(MemberExpr *node) override;
   virtual void VisitIndexExpr(IndexExpr *node) override;

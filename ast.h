@@ -92,12 +92,14 @@ class ZoneList {
   V(UnaryExpr)          \
   V(BinaryExpr)         \
   V(AssignExpr)         \
-  V(CallExpr) V(ThisExpr) V(ParamsExpr) V(ImportExpr) V(ArrayExpr) V(TableExpr)
+  V(CallExpr)           \
+  V(ThisExpr)           \
+  V(ParamsExpr) V(ImportExpr) V(ArrayExpr) V(TableExpr) V(TryCatchStat)
 
 enum class AstNodeType {
 #define AstNodeType_ITER(t) t,
   ITER_ASTNODE(AstNodeType_ITER)
-  
+#undef AstNodeType_ITER
 };
 struct AstNode {
   AstNodeType type;
@@ -152,6 +154,14 @@ struct ReturnStat : public Statement {
 };
 struct BreakStat : public Statement {};
 struct ContinueStat : public Statement {};
+
+struct TryCatchStat : public Statement {
+  BlockStat *try_;
+  BlockStat *catch_;
+  BlockStat *finally_;
+  Handle<String> err_var_name;
+};
+
 struct VarExpr : public AssignableExpr {
   Handle<String> name;
 };
@@ -191,7 +201,6 @@ struct AssignExpr : public Expression {
   Expression *right;
   TokenType opt;
 };
-
 
 inline bool IsAssignableExpr(AstNode *node) {
   switch (node->type) {

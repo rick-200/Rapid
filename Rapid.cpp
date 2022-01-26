@@ -14,14 +14,6 @@
 #include "object.h"
 using namespace rapid;
 using namespace internal;
-class A {
-  int x;
-
- public:
-  int y;
-  auto acc_x() {}
-};
-
 void print_object(Object* obj) {
   if (obj->IsNull())
     printf("null");
@@ -143,7 +135,7 @@ int main() {
     CompilingMemoryZone::PrepareAlloc();
     test_compile(code);
   }
-  
+
   // HandleScope hs;
   // int64_t cnt = 0;
   // int64_t t = 0;

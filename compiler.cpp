@@ -387,6 +387,9 @@ l_begin_switch:
         InitToken(TokenType::KVAL);
         t.v = Factory::FalseValue();
         Step(5);
+      } else if (strnequal(ps, "finally")) {
+        InitToken(TokenType::FINALLY);
+        Step(7);
       } else {
         ReadTokenSymbol();
       }
@@ -540,9 +543,11 @@ void CodeGenerator::VisitExpressionStat(ExpressionStat *p) {
 void CodeGenerator::VisitLiteral(Literal *p) { LoadK(p->value); }
 
 void CodeGenerator::VisitBlockStat(BlockStat *p) {
+  EnterScope();
   for (auto node : p->stat) {
     Visit(node);
   }
+  LeaveScope();
 }
 
 void CodeGenerator::VisitIfStat(IfStat *p) {
@@ -660,6 +665,23 @@ void CodeGenerator::VisitContinueStat(ContinueStat *p) {
   loop_ctx->continue_pos.push(CurrentPos());
   AppendOp(Opcode::JMP);
   AppendU16((uint16_t)0);
+}
+
+void CodeGenerator::VisitTryCatchStat(TryCatchStat *p) {
+  Codepos try_begin = CurrentPos();
+  Visit(p->try_);  // try本身带scope
+  Codepos jmp = PrepareJump();
+  Codepos try_end = CurrentPos();
+  EnterScope();
+  AddVar(p->err_var_name);
+  Visit(p->catch_);
+  LeaveScope();
+  ApplyJump(jmp, CurrentPos());
+  if (p->finally_ != nullptr) Visit(p->finally_);  // finally本身带scope
+  TryCatchCtx tcc;
+  tcc.begin = (uint32_t)try_begin;
+  tcc.end = (uint32_t)try_end;
+  ctx->try_catch.push(tcc);
 }
 
 void CodeGenerator::VisitVarExpr(VarExpr *p) {

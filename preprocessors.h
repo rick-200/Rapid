@@ -4,8 +4,8 @@
 #include <new>
 static_assert(sizeof(void*) == 8, "当前只能在64位机器上使用！");
 
-#define DEBUG_ALWAYS_GC 0
-#define DEBUG_LOG_EXEC_INFO 0
+#define DEBUG_ALWAYS_GC 1
+#define DEBUG_LOG_EXEC_INFO 1
 
 #define ASSUME(exp) __assume(exp)
 

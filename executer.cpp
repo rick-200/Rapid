@@ -65,11 +65,39 @@ struct CallInfo {
   StackOffset top;   // top指向栈顶元素（不是栈顶+1）
   byte *pc;          //当前字节码指针
 };
+
+Array *NewArray(size_t reserved) {
+  DEBUG_GC;
+  Array *arr = Heap::AllocArray(reserved);  // TODO: 处理AllocArray失败的情况
+  return arr;
+}
+Table *NewTable(size_t reserved) {
+  DEBUG_GC;
+  Table *tb = Heap::AllocTable(reserved);  // TODO: 处理AllocTable失败的情况
+  return tb;
+}
+Exception *NewException(String *type, String *info, Object *data) {
+  DEBUG_GC;
+  Exception *e = Heap::AllocException(type, info, data);
+  return e;
+}
+String *NewString(const char *str) {
+  DEBUG_GC;
+  String *s = Heap::AllocString(str, strlen(str));
+  return s;
+}
+
 #define I(_obj) (Integer::cast(_obj)->value())
 #define F(_obj) (Float::cast(_obj)->value())
 //#define MI(_obj)
 inline Object *Wrap(int64_t v) { return Integer::FromInt64(v); }
 inline Object *Wrap(double v) { return Float::FromDouble(v); }
+
+// inline void ThrowArithmeticException() {
+// String *s = NewString("ArithmeticException");
+// Exception *e = NewException(NewString("ArithmeticException"), );
+//}
+
 inline Object *Add(Object *a, Object *b) {
   if (a->IsInteger()) {
     if (b->IsInteger()) {
@@ -88,7 +116,7 @@ inline Object *Add(Object *a, Object *b) {
     // TODO:
     VERIFY(0);
   }
-  return Failure::Exception;
+  return Float::NaN();
 }
 inline Object *Sub(Object *a, Object *b) {
   if (a->IsInteger()) {
@@ -104,7 +132,7 @@ inline Object *Sub(Object *a, Object *b) {
       return Wrap(F(a) - F(b));
     }
   }
-  return Failure::Exception;
+  return Float::NaN();
 }
 inline Object *Mul(Object *a, Object *b) {
   if (a->IsInteger()) {
@@ -120,12 +148,11 @@ inline Object *Mul(Object *a, Object *b) {
       return Wrap(F(a) * F(b));
     }
   }
-  return Failure::Exception;
+  return Float::NaN();
 }
 inline Object *IDiv(Object *a, Object *b) {
-  if (!a->IsInteger() || !b->IsInteger()) {
-    // TODO:
-    return Failure::Exception;
+  if (!a->IsInteger() || !b->IsInteger() || Integer::cast(b)->value() == 0) {
+    return Float::NaN();
   }
   return Wrap(I(a) / I(b));
 }
@@ -136,23 +163,21 @@ inline Object *FDiv(Object *a, Object *b) {
   } else if (a->IsFloat()) {
     da = F(a);
   } else {
-    // TODO:
-    return Failure::Exception;
+    return Float::NaN();
   }
   if (b->IsInteger()) {
     db = I(b);
   } else if (b->IsFloat()) {
     db = F(b);
   } else {
-    // TODO:
-    return Failure::Exception;
+    return Float::NaN();
   }
   return Wrap(da / db);
 }
 #define DEF_INT_OP(_name, _op)                 \
   inline Object *_name(Object *a, Object *b) { \
     if (!a->IsInteger() || !b->IsInteger()) {  \
-      return Failure::Exception; /*TODO*/      \
+      return Float::NaN();                     \
     }                                          \
     return Wrap(I(a) _op I(b));                \
   }
@@ -162,6 +187,14 @@ DEF_INT_OP(BOr, |);
 DEF_INT_OP(BXor, ^);
 DEF_INT_OP(Shl, <<);
 DEF_INT_OP(Shr, >>);
+
+inline Object *BNot(Object *a) {
+  if (!a->IsInteger()) {
+    return Float::NaN();
+  }
+  return Wrap(~I(a));
+}
+
 inline Object *And(Object *a, Object *b) {
   if (!a->IsBool() || !b->IsBool()) {
     return Failure::Exception; /*TODO*/
@@ -179,12 +212,6 @@ inline Object *Not(Object *a) {
     return Failure::Exception; /*TODO*/
   }
   return (a->IsFalse()) ? Heap::TrueValue() : Heap::FalseValue();
-}
-inline Object *BNot(Object *a) {
-  if (!a->IsInteger()) {
-    return Failure::Exception; /*TODO*/
-  }
-  return Wrap(~I(a));
 }
 #define DEF_CMP_OP(_name, _op)                                         \
   inline Object *_name(Object *a, Object *b) {                         \
@@ -212,17 +239,6 @@ DEF_CMP_OP(NotEqual, !=);
   top[-1] = _name(top[-1], top[0]); \
   --top;
 #define EXEC_UNOP(_name) top[0] = _name(top[0]);
-
-Array *NewArray(size_t reserved) {
-  DEBUG_GC;
-  Array *arr = Heap::AllocArray(reserved);  // TODO: 处理AllocArray失败的情况
-  return arr;
-}
-Table *NewTable(size_t reserved) {
-  DEBUG_GC;
-  Table *tb = Heap::AllocTable(reserved);  // TODO: 处理AllocTable失败的情况
-  return tb;
-}
 
 class ExecuterImpl : public Executer {
   ScriptStack m_stack;
@@ -327,6 +343,7 @@ class ExecuterImpl : public Executer {
       char buff[32];
       read_bytecode(pc, buff);
       fprintf(dbg_f, "---->exec: %s\n", buff);
+      fflush(dbg_f);
 #endif  //  _DEBUG
       Opcode op = (Opcode)*pc;
       ++pc;
@@ -611,6 +628,9 @@ class ExecuterImpl : public Executer {
 #endif
     }
     goto l_return;
+
+  l_exception:
+
   l_to_begin:
     ptr_top = nullptr;
 #if (DEBUG_LOG_EXEC_INFO)

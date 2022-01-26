@@ -1,0 +1,208 @@
+---->exec: LOADK 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <str>console
+------------------------
+---->exec: IMPORT
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+------------------------
+---->exec: LOADK 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <int>1
+------------------------
+---->exec: LOADK 2
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <int>1
+  [3:2] <float>0.1
+------------------------
+---->exec: LOADL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <int>1
+  [3:2] <float>0.1
+  [4:3] <int>1
+------------------------
+---->exec: LOADL 2
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <int>1
+  [3:2] <float>0.1
+  [4:3] <int>1
+  [5:4] <float>0.1
+------------------------
+---->exec: BAND
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <int>1
+  [3:2] <float>0.1
+  [4:3] <float>nan
+------------------------
+---->exec: STOREL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+------------------------
+---->exec: LOADL 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+  [4:3] <native_obj>000002915DC4A260
+------------------------
+---->exec: LOADK 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+  [4:3] <native_obj>000002915DC4A260
+  [5:4] <str>print
+------------------------
+---->exec: LOADK 4
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+  [4:3] <native_obj>000002915DC4A260
+  [5:4] <str>print
+  [6:5] <str>a
+------------------------
+---->exec: LOADL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+  [4:3] <native_obj>000002915DC4A260
+  [5:4] <str>print
+  [6:5] <str>a
+  [7:6] <float>nan
+------------------------
+---->exec: THIS_CALL 2
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+  [4:3] <null>
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+------------------------
+---->exec: JMP 20
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+------------------------
+---->exec: LOADL 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+  [4:3] <native_obj>000002915DC4A260
+------------------------
+---->exec: LOADK 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+  [4:3] <native_obj>000002915DC4A260
+  [5:4] <str>print
+------------------------
+---->exec: LOADK 6
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+  [4:3] <native_obj>000002915DC4A260
+  [5:4] <str>print
+  [6:5] <str>finally
+------------------------
+---->exec: THIS_CALL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+  [4:3] <null>
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+  [1:0] <native_obj>000002915DC4A260
+  [2:1] <float>nan
+  [3:2] <float>0.1
+------------------------
+---->exec: POPN 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: StatelessCall<'#global'@000002915DC4A420>
+------------------------
+---->exec: RETNULL
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+------------------------

@@ -8,6 +8,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <cstdio>
+#include <numeric>
 #include <utility>
 
 #include "heap.h"
@@ -53,11 +54,13 @@ namespace internal {
   V(VarData)                          \
   V(ExternVarData)                    \
   V(ExternVar)                        \
-  V(SharedFunctionData)
+  V(SharedFunctionData) V(TryCatchTable) V(StackTraceData)
 
 #define ITER_STRUCT_DERIVED(V) \
   V(VarData)                   \
-  V(ExternVarData) V(ExternVar) V(SharedFunctionData) V(FunctionData)
+  V(ExternVarData)             \
+  V(ExternVar)                 \
+  V(SharedFunctionData) V(FunctionData) V(TryCatchTable) V(StackTraceData)
 
 typedef intptr_t Address;
 
@@ -106,8 +109,10 @@ enum class HeapObjectType : uint8_t {
   VarData,
   ExternVarData,
   ExternVar,
+  TryCatchTable,
   SharedFunctionData,
   FunctionData,
+  StackTraceData,
   Flag_Struct_End,
 };
 
@@ -169,6 +174,13 @@ class Integer : public Object {
 //保存于指针内
 class Float : public Object {
  public:
+  static Float *NaN() {
+    static constexpr double v = std::numeric_limits<double>::quiet_NaN();
+    uint64_t v64 = *(uint64_t *)&v;
+    ASSERT(v64 == (v64 & (~TAG_FLOAT)));
+    v64 = v64 | TAG_FLOAT;
+    return *(Float **)&v64;
+  }
   double value() {
     uint64_t v = reinterpret_cast<Address>(this) ^ TAG_FLOAT;
     return *reinterpret_cast<double *>(&v);
@@ -781,26 +793,7 @@ class InstructionArray : public HeapObject {
   Cmd *begin() { return m_data; }
 };
 
-class Exception : public HeapObject {
-  String *m_type;
-  String *m_info;
-  Object *m_data;
 
- private:
-  static void trace_ref(Object *obj, GCTracer *gct) {
-    Exception *_this = Exception::cast(obj);
-    gct->Trace(_this->m_type);
-    gct->Trace(_this->m_info);
-    gct->Trace(_this->m_data);
-  }
-
- public:
-  OBJECT_DEF(Exception)
-  DEF_CAST(Exception)
-  DEF_R_ACCESSOR(type);
-  DEF_R_ACCESSOR(info);
-  DEF_R_ACCESSOR(data);
-};
 struct AccessDomain {
   FixedTable *property;
   FixedTable *memberfunc;
@@ -812,6 +805,7 @@ class RapidObject : public HeapObject {
   AccessDomain m_private;
 
  public:
+
 };
 
 //包含简单数据的对象的基类
@@ -868,7 +862,17 @@ class ExternVar : public Struct {
   OBJECT_DEF(ExternVar)
   DEF_CAST(ExternVar)
 };
+struct TryCatchInfo {
+  uint32_t begin, end;
+};
+class TryCatchTable : public Struct {
+  size_t m_length;
+  TryCatchInfo m_data[];
 
+ public:
+  OBJECT_DEF(TryCatchTable)
+  DEF_CAST(TryCatchTable)
+};
 class SharedFunctionData : public Struct {
  public:
   String *name;
@@ -877,6 +881,7 @@ class SharedFunctionData : public Struct {
   FixedArray *inner_func;
   FixedArray *vars;
   FixedArray *extvars;
+
   size_t max_stack;
   size_t param_cnt;
 
@@ -900,8 +905,46 @@ class FunctionData : public Struct {
   OBJECT_DEF(FunctionData)
   DEF_CAST(FunctionData)
 };
+class StackTraceData : public Struct {
+ public:
+  bool is_script;
+  uint32_t line;
+  String *filename;
+  String *funcname;
+
+ private:
+  DECL_TRACEREF(StackTraceData, _M(filename), _M(funcname));
+
+ public:
+  OBJECT_DEF(StackTraceData)
+  DEF_CAST(StackTraceData)
+};
+
 #undef DECL_TRACEREF
 #undef _M
+
+class Exception : public HeapObject {
+  String *m_type;
+  String *m_info;
+  Object *m_data;
+  Array *m_stacktrace;
+ private:
+  static void trace_ref(Object *obj, GCTracer *gct) {
+    Exception *_this = Exception::cast(obj);
+    gct->TraceAll(_this->m_type, _this->m_info, _this->m_data,
+                  _this->m_stacktrace);
+  }
+
+ public:
+  OBJECT_DEF(Exception)
+  DEF_CAST(Exception)
+  DEF_R_ACCESSOR(type);
+  DEF_R_ACCESSOR(info);
+  DEF_R_ACCESSOR(data);
+  DEF_R_ACCESSOR(stacktrace);
+};
+
+
 
 void debug_print(FILE *f, Object *obj);
 
@@ -1058,3 +1101,35 @@ inline Object *Object::InvokeMetaFunc(MetaFunctionID id,
 }  // namespace internal
 }  // namespace rapid
 #pragma warning(pop)
+/*
+class Animal{
+  name;
+  age;
+  private uid;
+  $init(name,age){
+    this.name=name;
+    this.age=age;
+    this.id=generate_uid();
+  }
+  protected move(){
+    print("animal move");
+  }
+}
+class Dog: Animal{
+  name;
+  age;
+  private uid;
+  $init(name,age): super(name,age){
+
+  }
+  walk(){
+    print("dog walk");
+    super.move();
+  }
+}
+
+
+
+
+
+*/

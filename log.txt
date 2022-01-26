@@ -1,32 +1,73 @@
 [rapid::internal::HandleContainer::OpenLocalSlot 29]null
 [rapid::internal::HandleContainer::OpenLocalSlot 29]null
-[rapid::internal::HeapImpl::DoGC 252]gc complete: before:2511 after:2511 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:432 after:432 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1268 after:1268 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1332 after:1332 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1396 after:1396 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1460 after:1460 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1518 after:1518 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1576 after:1576 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1634 after:1634 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1692 after:1692 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1750 after:1750 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1814 after:1814 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1876 after:1876 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1934 after:1934 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:1992 after:1992 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:2050 after:2050 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:2114 after:2114 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:2176 after:2176 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:2238 after:2238 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:2296 after:2296 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:2360 after:2360 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:2422 after:2422 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:2486 after:2486 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3346 after:3346 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3442 after:3442 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3554 after:3554 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3626 after:3626 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3674 after:3674 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3722 after:3722 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3770 after:3770 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3818 after:3818 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3858 after:3858 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3954 after:3954 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:3994 after:3994 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:4785 after:4785 reduce:0
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:4825 after:4825 reduce:0
 [rapid::internal::HandleContainer::OpenLocalSlot 29]null
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE85EE0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE87020
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE86FA0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE86620
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE86A20
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE870A0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE86820
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE86DA0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE86AA0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE867A0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE87120
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE86220
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE863A0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE868A0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE8A6F0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE8A990
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE8AA30
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE869A0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE88780
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE88C50
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE88D30
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE8AB90
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE89480
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE8AC40
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE8A2B0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE896B0
-[rapid::internal::HeapImpl::DoGC 242]sweep object:0000026DCFE8A390
-[rapid::internal::HeapImpl::DoGC 252]gc complete: before:4243 after:536 reduce:3707
+[rapid::internal::HandleContainer::OpenLocalSlot 29]null
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC46060
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC36090
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC46730
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC46AB0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC46BB0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC46A30
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC466B0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC470B0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC47130
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC471B0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC47230
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC472B0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC46430
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC47330
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC464B0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC46930
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC469B0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC46530
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC46D30
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC47030
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC46C30
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC4B460
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC4A420
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC4A730
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC4A4C0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC4A2D0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC4A1F0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC499A0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC49850
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC49EE0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC4A7E0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC49AF0
+[rapid::internal::HeapImpl::DoGC 245]sweep object:000002915DC4A880
+[rapid::internal::HeapImpl::DoGC 255]gc complete: before:4889 after:536 reduce:4353
