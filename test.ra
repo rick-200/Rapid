@@ -1,4 +1,23 @@
 var console = import("console");
+var arr=[];
+
+func get_print_x(x){
+    func print_x(){
+        console.print(x);
+    }
+    return print_x;
+}
+
+for(var i=0;i<3;i+=1){
+  arr.push(get_print_x(i));
+}
+
+arr[0]();
+arr[1]();
+arr[2]();
+
+
+/*
 var a=1,b=0.1;
 try{
     a = a & b;
@@ -8,6 +27,7 @@ try{
 }finally{
     console.print("finally");
 }
+*/
 /*
 var tb={
     "aaa":1,
@@ -18,6 +38,26 @@ tb["bbb"]=4;
 console.print(tb);
 */
 /*
+
+func new_counter(){
+  int x=0;
+  func inc(){
+      x+=1;
+  }
+  func dec(){
+      x-=1;
+  }
+  func val(){
+      return x;
+  }
+  inc();
+  dec();
+  return [inc, dec, val];
+}
+
+var counter = new_counter();
+
+
 var arr = [];
 for(var i=0;i<100;i+=1)
     arr.push(i);

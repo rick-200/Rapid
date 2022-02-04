@@ -2,204 +2,1169 @@
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
   [1:0] <str>console
 ------------------------
 ---->exec: IMPORT
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+------------------------
+---->exec: MAKE_ARRAY_0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+------------------------
+---->exec: CLOSURE 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
 ------------------------
 ---->exec: LOADK 1
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <int>1
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+------------------------
+---->exec: LOADL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <int>0
 ------------------------
 ---->exec: LOADK 2
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <int>1
-  [3:2] <float>0.1
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <int>0
+  [6:5] <int>3
+------------------------
+---->exec: LT
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <bool>true
+------------------------
+---->exec: JMP_F 35
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
 ------------------------
 ---->exec: LOADL 1
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <int>1
-  [3:2] <float>0.1
-  [4:3] <int>1
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <array>
+------------------------
+---->exec: LOADK 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <array>
+  [6:5] <str>push
 ------------------------
 ---->exec: LOADL 2
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <int>1
-  [3:2] <float>0.1
-  [4:3] <int>1
-  [5:4] <float>0.1
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
 ------------------------
----->exec: BAND
+---->exec: LOADL 3
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <int>1
-  [3:2] <float>0.1
-  [4:3] <float>nan
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [8:7] <int>0
 ------------------------
----->exec: STOREL 1
+---->exec: CALL 1
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+CallInfo: FullCall<00000268BE6C1470:'get_print_x'@00000268BE6BF3C0>
+  [8:0] <int>0
 ------------------------
----->exec: LOADL 0
+---->exec: CLOSURE 0
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
-  [4:3] <native_obj>000002915DC4A260
-------------------------
----->exec: LOADK 3
-----------stack---------
-CallInfo: NativeCall
-  [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
-  [4:3] <native_obj>000002915DC4A260
-  [5:4] <str>print
-------------------------
----->exec: LOADK 4
-----------stack---------
-CallInfo: NativeCall
-  [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
-  [4:3] <native_obj>000002915DC4A260
-  [5:4] <str>print
-  [6:5] <str>a
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+CallInfo: FullCall<00000268BE6C1470:'get_print_x'@00000268BE6BF3C0>
+  [8:0] <int>0
+  [9:1] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
 ------------------------
 ---->exec: LOADL 1
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
-  [4:3] <native_obj>000002915DC4A260
-  [5:4] <str>print
-  [6:5] <str>a
-  [7:6] <float>nan
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+CallInfo: FullCall<00000268BE6C1470:'get_print_x'@00000268BE6BF3C0>
+  [8:0] <int>0
+  [9:1] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
+  [10:2] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
 ------------------------
----->exec: THIS_CALL 2
+---->exec: RET
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
-  [4:3] <null>
-------------------------
----->exec: POP
-----------stack---------
-CallInfo: NativeCall
-  [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
-------------------------
----->exec: JMP 20
-----------stack---------
-CallInfo: NativeCall
-  [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
-------------------------
----->exec: LOADL 0
-----------stack---------
-CallInfo: NativeCall
-  [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
-  [4:3] <native_obj>000002915DC4A260
-------------------------
----->exec: LOADK 3
-----------stack---------
-CallInfo: NativeCall
-  [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
-  [4:3] <native_obj>000002915DC4A260
-  [5:4] <str>print
-------------------------
----->exec: LOADK 6
-----------stack---------
-CallInfo: NativeCall
-  [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
-  [4:3] <native_obj>000002915DC4A260
-  [5:4] <str>print
-  [6:5] <str>finally
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
 ------------------------
 ---->exec: THIS_CALL 1
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <null>
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+------------------------
+---->exec: LOADL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <int>0
+------------------------
+---->exec: LOADK 4
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <int>0
+  [6:5] <int>1
+------------------------
+---->exec: ADD
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>0
+  [5:4] <int>1
+------------------------
+---->exec: STOREL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+------------------------
+---->exec: JMP -39
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+------------------------
+---->exec: LOADL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <int>1
+------------------------
+---->exec: LOADK 2
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <int>1
+  [6:5] <int>3
+------------------------
+---->exec: LT
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <bool>true
+------------------------
+---->exec: JMP_F 35
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+------------------------
+---->exec: LOADL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <array>
+------------------------
+---->exec: LOADK 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <array>
+  [6:5] <str>push
+------------------------
+---->exec: LOADL 2
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+------------------------
+---->exec: LOADL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [8:7] <int>1
+------------------------
+---->exec: CALL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+CallInfo: FullCall<00000268BE6C1470:'get_print_x'@00000268BE6BF3C0>
+  [8:0] <int>1
+------------------------
+---->exec: CLOSURE 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+CallInfo: FullCall<00000268BE6C1470:'get_print_x'@00000268BE6BF3C0>
+  [8:0] <int>1
+  [9:1] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+------------------------
+---->exec: LOADL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+CallInfo: FullCall<00000268BE6C1470:'get_print_x'@00000268BE6BF3C0>
+  [8:0] <int>1
+  [9:1] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+  [10:2] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+------------------------
+---->exec: RET
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+------------------------
+---->exec: THIS_CALL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <null>
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+------------------------
+---->exec: LOADL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <int>1
+------------------------
+---->exec: LOADK 4
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <int>1
+  [6:5] <int>1
+------------------------
+---->exec: ADD
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>1
+  [5:4] <int>2
+------------------------
+---->exec: STOREL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+------------------------
+---->exec: JMP -39
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+------------------------
+---->exec: LOADL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <int>2
+------------------------
+---->exec: LOADK 2
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <int>2
+  [6:5] <int>3
+------------------------
+---->exec: LT
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <bool>true
+------------------------
+---->exec: JMP_F 35
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+------------------------
+---->exec: LOADL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <array>
+------------------------
+---->exec: LOADK 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <array>
+  [6:5] <str>push
+------------------------
+---->exec: LOADL 2
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+------------------------
+---->exec: LOADL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [8:7] <int>2
+------------------------
+---->exec: CALL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+CallInfo: FullCall<00000268BE6C1470:'get_print_x'@00000268BE6BF3C0>
+  [8:0] <int>2
+------------------------
+---->exec: CLOSURE 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+CallInfo: FullCall<00000268BE6C1470:'get_print_x'@00000268BE6BF3C0>
+  [8:0] <int>2
+  [9:1] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+------------------------
+---->exec: LOADL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+CallInfo: FullCall<00000268BE6C1470:'get_print_x'@00000268BE6BF3C0>
+  [8:0] <int>2
+  [9:1] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+  [10:2] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+------------------------
+---->exec: RET
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <array>
+  [6:5] <str>push
+  [7:6] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+------------------------
+---->exec: THIS_CALL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <null>
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+------------------------
+---->exec: LOADL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <int>2
+------------------------
+---->exec: LOADK 4
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <int>2
+  [6:5] <int>1
+------------------------
+---->exec: ADD
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>2
+  [5:4] <int>3
+------------------------
+---->exec: STOREL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>3
+------------------------
+---->exec: JMP -39
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>3
+------------------------
+---->exec: LOADL 3
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>3
+  [5:4] <int>3
+------------------------
+---->exec: LOADK 2
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>3
+  [5:4] <int>3
+  [6:5] <int>3
+------------------------
+---->exec: LT
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>3
+  [5:4] <bool>false
+------------------------
+---->exec: JMP_F 35
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <int>3
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+------------------------
+---->exec: LOADL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <array>
+------------------------
+---->exec: LOADK 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <array>
+  [5:4] <int>0
+------------------------
+---->exec: GET_I
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
+------------------------
+---->exec: CALL 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1DF0:'print_x'@00000268BE6BF460>
+------------------------
+---->exec: LOADE 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1DF0:'print_x'@00000268BE6BF460>
+  [5:0] <native_obj>00000268BE6BC420
+------------------------
+---->exec: LOADK 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1DF0:'print_x'@00000268BE6BF460>
+  [5:0] <native_obj>00000268BE6BC420
+  [6:1] <str>print
+------------------------
+---->exec: LOADE 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1DF0:'print_x'@00000268BE6BF460>
+  [5:0] <native_obj>00000268BE6BC420
+  [6:1] <str>print
+  [7:2] <int>0
+------------------------
+---->exec: THIS_CALL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1DF0:'print_x'@00000268BE6BF460>
+  [5:0] <null>
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1DF0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1DF0:'print_x'@00000268BE6BF460>
+------------------------
+---->exec: RETNULL
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
   [4:3] <null>
 ------------------------
 ---->exec: POP
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
-  [1:0] <native_obj>000002915DC4A260
-  [2:1] <float>nan
-  [3:2] <float>0.1
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+------------------------
+---->exec: LOADL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <array>
+------------------------
+---->exec: LOADK 4
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <array>
+  [5:4] <int>1
+------------------------
+---->exec: GET_I
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+------------------------
+---->exec: CALL 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C11F0:'print_x'@00000268BE6BF460>
+------------------------
+---->exec: LOADE 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C11F0:'print_x'@00000268BE6BF460>
+  [5:0] <native_obj>00000268BE6BC420
+------------------------
+---->exec: LOADK 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C11F0:'print_x'@00000268BE6BF460>
+  [5:0] <native_obj>00000268BE6BC420
+  [6:1] <str>print
+------------------------
+---->exec: LOADE 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C11F0:'print_x'@00000268BE6BF460>
+  [5:0] <native_obj>00000268BE6BC420
+  [6:1] <str>print
+  [7:2] <int>1
+------------------------
+---->exec: THIS_CALL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C11F0:'print_x'@00000268BE6BF460>
+  [5:0] <null>
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C11F0:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C11F0:'print_x'@00000268BE6BF460>
+------------------------
+---->exec: RETNULL
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <null>
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+------------------------
+---->exec: LOADL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <array>
+------------------------
+---->exec: LOADK 5
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <array>
+  [5:4] <int>2
+------------------------
+---->exec: GET_I
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+------------------------
+---->exec: CALL 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1770:'print_x'@00000268BE6BF460>
+------------------------
+---->exec: LOADE 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1770:'print_x'@00000268BE6BF460>
+  [5:0] <native_obj>00000268BE6BC420
+------------------------
+---->exec: LOADK 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1770:'print_x'@00000268BE6BF460>
+  [5:0] <native_obj>00000268BE6BC420
+  [6:1] <str>print
+------------------------
+---->exec: LOADE 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1770:'print_x'@00000268BE6BF460>
+  [5:0] <native_obj>00000268BE6BC420
+  [6:1] <str>print
+  [7:2] <int>2
+------------------------
+---->exec: THIS_CALL 1
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1770:'print_x'@00000268BE6BF460>
+  [5:0] <null>
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <funcdata>00000268BE6C1770:print_x@00000268BE6BF460
+CallInfo: FullCall<00000268BE6C1770:'print_x'@00000268BE6BF460>
+------------------------
+---->exec: RETNULL
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+  [4:3] <null>
+------------------------
+---->exec: POP
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
+------------------------
+---->exec: CLOSE 0
+----------stack---------
+CallInfo: NativeCall
+  [0:0] <null>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
+  [1:0] <native_obj>00000268BE6BC420
+  [2:1] <array>
+  [3:2] <funcdata>00000268BE6C1470:get_print_x@00000268BE6BF3C0
 ------------------------
 ---->exec: POPN 3
 ----------stack---------
 CallInfo: NativeCall
   [0:0] <null>
-CallInfo: StatelessCall<'#global'@000002915DC4A420>
+CallInfo: FullCall<00000268BE6B8C30:'#global'@00000268BE6C0050>
 ------------------------
 ---->exec: RETNULL
 ----------stack---------

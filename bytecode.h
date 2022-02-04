@@ -17,11 +17,11 @@ enum class Opcode : uint8_t {
   NOP,
   LOADL,
   STOREL,
+  STOREE,
   LOADK,
   LOADE,
   LOAD_THIS,
   LOAD_PARAMS,
-  STOREE,
   IMPORT,
   COPY,  //复制栈顶并push到栈上
   // PUSH,  //用于定义变量时将初始值push到栈上 ---
@@ -29,6 +29,8 @@ enum class Opcode : uint8_t {
   PUSH_NULL,  //用于定义变量时将初始值null push到栈上
   POP,
   POPN,  // pop n个，u8
+
+  CLOSE, //u16 关闭一个externvar
 
   MAKE_ARRAY,    // u16
   MAKE_ARRAY_0,  // 0
@@ -79,7 +81,7 @@ enum class Opcode : uint8_t {
   RET,
   RETNULL,
   CLOSURE,
-  CLOSURE_SELF,
+  //CLOSURE_SELF,
 
   PLACE_HOLDER,
 
@@ -288,6 +290,7 @@ inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
     CASE_u16(LOADK);
     CASE_u16(LOADE);
     CASE_u16(STOREE);
+    CASE_u16(CLOSE);
     CASE_u16(MAKE_ARRAY);
     CASE_0(MAKE_ARRAY_0);
     CASE_u16(MAKE_TABLE);
@@ -334,7 +337,7 @@ inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
     CASE_s16(JMP_T);
     CASE_s16(JMP_F);
     CASE_u16(CLOSURE);
-    CASE_0(CLOSURE_SELF);
+    //CASE_0(CLOSURE_SELF);
 
     default:
       ASSERT(0);

@@ -14,8 +14,6 @@ class Executer : public StaticClass {
   static void ThrowException(Handle<Exception>);
   static Handle<Exception> GetException();
   static bool HasException();
-  static Handle<Object> CallFunction(Handle<SharedFunctionData> sfd,
-                                     const Parameters &param);
   static Handle<Object> CallFunction(Handle<FunctionData> fd,
                                      const Parameters &param);
   static void RegisterModule(Handle<String> name, Handle<Object> md);

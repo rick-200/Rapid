@@ -81,7 +81,7 @@ inline bool basic_obj_equal(Object *a, Object *b) {
 // private:
 //  uint16_t FindVar(Handle<String> name) {
 //    for (size_t i = 0; i < vars->length(); i++) {
-//      if (String::Equal(VarData::cast(vars->get(i))->name, *name))
+//      if (String::Equal(VarInfo::cast(vars->get(i))->name, *name))
 //        return (uint16_t)i;
 //    }
 //    return -1;
@@ -124,7 +124,7 @@ inline bool basic_obj_equal(Object *a, Object *b) {
 //  void ClearStack() { top = vars->length(); }
 //  void DefVar(Handle<String> name) {
 //    ASSERT(vars->length() == top);
-//    Handle<VarData> vd = Factory::NewVarData();
+//    Handle<VarInfo> vd = Factory::NewVarData();
 //    vd->name = *name;
 //    vars->push(*vd);
 //    top = vars->length();
@@ -791,17 +791,22 @@ struct VarCtx {
   uint16_t slot_id;     // slot编号
                      //注意！因为使用了空Handle占位作为作用域标识
                      // slot_id不一定等于其所在List内的编号
+  bool is_externvar;  //是否是内部函数的externvar
 };
 struct ExtVarCtx {
   Handle<String> name;
+  bool in_stack;  //是否在外层函数栈中
   uint16_t pos;
 };
 struct TryCatchCtx {
-  uint32_t begin;
-  uint32_t end;
+  uint32_t try_begin;
+  uint32_t try_end;
+  uint32_t catch_begin;
+  uint32_t catch_end;
 };
 struct FunctionCtx {
   Handle<String> name;
+  FunctionCtx *outer_func;
   ZoneList<VarCtx> allvar;
   ZoneList<VarCtx> var;
   ZoneList<ExtVarCtx> extvar;
@@ -850,16 +855,31 @@ class CodeGenerator : public ASTVisitor {
 
  public:
   CodeGenerator() : ctx(nullptr), loop_ctx(nullptr), error_env(nullptr) {}
-  Handle<SharedFunctionData> Generate(FuncDecl *fd) {
+  Handle<FunctionData> Generate(FuncDecl *fd) {
     error_env = (jmp_buf *)malloc(sizeof(jmp_buf));
     ASSERT(error_env != nullptr);
     if (setjmp(*error_env) != 0) {
       free(error_env);
-      return Handle<SharedFunctionData>();
+      return Handle<FunctionData>();
     }
-    Visit(fd);
+
+    FunctionCtx *fc = AllocFunctionCtx();
+    fc->name = fd->name;
+    fc->outer_func = nullptr;
+    fc->param_cnt = fd->param.size();
+    fc->top = fc->max_stack = fd->param.size();
+    ctx = fc;
+    Visit(fd->body);
+    if (ctx->cmd.size() == 0 || ctx->cmd.back() != (uint8_t)Opcode::RET) {
+      AppendOp(Opcode::RETNULL);
+    }
+
     free(error_env);
-    return Translate(ctx);
+
+    Handle<FunctionData> hfd = Factory::NewFunctionData();
+    hfd->shared_data = *Translate(ctx);
+
+    return hfd;
   }
 
  private:
@@ -874,12 +894,20 @@ class CodeGenerator : public ASTVisitor {
            sizeof(Cmd) * ctx->cmd.size());
     sfd->vars = *Factory::NewFixedArray(ctx->allvar.size());
     for (size_t i = 0; i < ctx->allvar.size(); i++) {
-      Handle<VarData> vd = Factory::NewVarData();
+      Handle<VarInfo> vd = Factory::NewVarInfo();
       vd->name = *ctx->allvar[i].name;
       vd->slot_id = ctx->allvar[i].slot_id;
       sfd->vars->set(i, *vd);
     }
-    sfd->extvars = *Factory::NewFixedArray(0);
+    sfd->extvars = *Factory::NewFixedArray(ctx->extvar.size());
+    for (size_t i = 0; i < ctx->extvar.size(); i++) {
+      Handle<ExternVarInfo> evi = Factory::NewExternVarInfo();
+      evi->name = *ctx->extvar[i].name;
+      evi->in_stack = ctx->extvar[i].in_stack;
+      evi->pos = ctx->extvar[i].pos;
+      sfd->extvars->set(i, *evi);
+    }
+
     sfd->kpool = *Factory::NewFixedArray(ctx->kpool.size());
     for (size_t i = 0; i < ctx->kpool.size(); i++) {
       sfd->kpool->set(i, *ctx->kpool[i]);
@@ -938,14 +966,22 @@ class CodeGenerator : public ASTVisitor {
     if (ctx->top > ctx->max_stack) ctx->max_stack = ctx->top;
   }
   void pop(uint16_t size = 1) { ctx->top -= size; }
-  void EnterScope() { ctx->var.push(VarCtx{Handle<String>(), invalid_pos}); }
-  void LeaveScope() {
+  void EnterScope() {
+    ctx->var.push(VarCtx{Handle<String>(), invalid_pos, false});
+  }
+  void LeaveScope(bool do_clear /*是否生成清理工作的代码*/ = true) {
     uint32_t cnt = 0;
     while (!ctx->var.back().name.empty()) {
+      if (do_clear && ctx->var.back().is_externvar) {
+        AppendOp(Opcode::CLOSE);
+        AppendU16(ctx->var.back().slot_id);
+      }
       ctx->var.pop();
       pop();
       ++cnt;
     }
+    ctx->var.pop();
+    if (!do_clear) return;
     VERIFY(cnt < 256);
     if (cnt != 0) {
       if (cnt == 1) {
@@ -955,7 +991,6 @@ class CodeGenerator : public ASTVisitor {
         AppendU8((uint8_t)cnt);
       }
     }
-    ctx->var.pop();
   }
   [[noreturn]] void error_symbol_notfound(int row, int col,
                                           Handle<String> name) {
@@ -978,17 +1013,17 @@ class CodeGenerator : public ASTVisitor {
     Executer::ThrowException(e);
     longjmp(*error_env, 1);
   }
-  uint16_t AddVar(Handle<String> name) {
-    uint16_t pos = (uint16_t)ctx->var.size();
+  // AddVar后应立即将值push到栈上
+  void AddVar(Handle<String> name) {
     VarCtx vc;
     vc.name = name;
     vc.slot_id = ctx->top;
+    vc.is_externvar = false;
     ctx->var.push(vc);
     ctx->allvar.push(vc);
     // push(); -- 不需要push，只要不pop就好了
-    return pos;
   }
-  uint16_t FindVar(Handle<String> name) {
+  uint16_t FindVarFromCtx(FunctionCtx *ctx, Handle<String> name) {
     if (ctx->var.size() == 0) return invalid_pos;
     size_t i = ctx->var.size();
     do {
@@ -997,10 +1032,11 @@ class CodeGenerator : public ASTVisitor {
       if (String::Equal(*name, *ctx->var[i].name)) {
         return ctx->var[i].slot_id;
       }
-    } while (i != 0);  //倒序查找最近的变量
+    } while (i > 0);  //倒序查找最近的变量
     // for (size_t i = ctx->var.size() - 1; i >= 0; i--)  -- 错误->i为无符号类型
     return invalid_pos;
   }
+  uint16_t FindVar(Handle<String> name) { return FindVarFromCtx(ctx, name); }
   uint16_t FindConst(Handle<Object> v) {
     for (size_t i = 0; i < ctx->kpool.size(); i++) {
       if (basic_obj_equal(*ctx->kpool[i], *v)) {
@@ -1010,6 +1046,41 @@ class CodeGenerator : public ASTVisitor {
     uint16_t ret = (uint16_t)ctx->kpool.size();
     ctx->kpool.push(v);
     return ret;
+  }
+  void SetIsExternVar(FunctionCtx *ctx, Handle<String> name) {
+    size_t i = ctx->var.size();
+    do {
+      --i;
+      if (ctx->var[i].name.empty()) continue;  // Scope标识，跳过
+      if (String::Equal(*name, *ctx->var[i].name)) {
+        ctx->var[i].is_externvar = true;
+        return;
+      }
+    } while (i > 0);  //倒序查找最近的变量
+  }
+  uint16_t FindExternVarFromCtx(FunctionCtx *cur_ctx, Handle<String> name) {
+    for (size_t i = 0; i < cur_ctx->extvar.size(); i++) {
+      if (String::Equal(*cur_ctx->extvar[i].name, *name)) return i;
+    }
+    if (cur_ctx->outer_func == nullptr) return invalid_pos;
+    uint16_t vp = FindVarFromCtx(cur_ctx->outer_func, name);
+    ExtVarCtx evc;
+    evc.name = name;
+    if (vp != invalid_pos) {
+      SetIsExternVar(cur_ctx->outer_func, name);
+      evc.in_stack = true;
+      evc.pos = vp;
+    } else {
+      vp = FindExternVarFromCtx(cur_ctx->outer_func, name);
+      if (vp == invalid_pos) return invalid_pos;
+      evc.in_stack = false;
+      evc.pos = vp;
+    }
+    cur_ctx->extvar.push(evc);
+    return cur_ctx->extvar.size() - 1;
+  }
+  uint16_t FindExternVar(Handle<String> name) {
+    return FindExternVarFromCtx(ctx, name);
   }
   void LoadK(Handle<Object> v) {
     uint16_t pos = FindConst(v);
@@ -1026,17 +1097,28 @@ class CodeGenerator : public ASTVisitor {
     push();
     return true;
   }
-  //尝试生成Closure指令，若成功，返回true
-  bool Closure(Handle<String> name) {
-    for (size_t i = 0; i < ctx->inner_func.size(); i++) {
-      if (String::Equal(*ctx->inner_func[i]->name, *name)) {
-        AppendOp(Opcode::CLOSURE);
-        AppendU16((uint16_t)i);
-        push();
-        return true;
-      }
-    }
-    return false;
+  bool LoadE(Handle<String> name) {
+    uint16_t evp = FindExternVar(name);
+    if (evp == invalid_pos) return false;
+    AppendOp(Opcode::LOADE);
+    AppendU16(evp);
+    push();
+    return true;
+  }
+  void Closure(uint16_t fdp) {
+    AppendOp(Opcode::CLOSURE);
+    AppendU16(fdp);
+    push();
+  }
+  void StoreL(uint16_t vp) {
+    AppendOp(Opcode::STOREL);
+    AppendU16(vp);
+    pop();
+  }
+  void StoreE(uint16_t vp) {
+    AppendOp(Opcode::STOREE);
+    AppendU16(vp);
+    pop();
   }
   void Call(uint16_t param_cnt /*不包括被调用对象*/) {
     AppendOp(Opcode::CALL);

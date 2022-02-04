@@ -206,8 +206,8 @@ class HeapImpl /*public: Heap --
 #define ITERATOR_DEF_ALLOC_STRUCT(T) \
   T *Alloc##T() { ALLOC_STRUCT_IMPL(T); }
   ITER_STRUCT_DERIVED(ITERATOR_DEF_ALLOC_STRUCT)
-  //VarData *AllocVarData() { ALLOC_STRUCT_IMPL(VarData); }
-  //ExternVarData *AllocExternVarData() { ALLOC_STRUCT_IMPL(ExternVarData); }
+  //VarInfo *AllocVarData() { ALLOC_STRUCT_IMPL(VarInfo); }
+  //ExternVarInfo *AllocExternVarData() { ALLOC_STRUCT_IMPL(ExternVarInfo); }
   //SharedFunctionData *AllocSharedFunctionData() {
   //  ALLOC_STRUCT_IMPL(SharedFunctionData);
   //}
@@ -297,12 +297,12 @@ Object *Heap::FalseValue() { return CALL_HEAP_IMPL(FalseValue); }
 Exception *Heap::AllocException(String *type, String *info, Object *data) {
   return CALL_HEAP_IMPL(AllocExpection, type, info, data);
 }
-VarData *Heap::AllocVarData() { return CALL_HEAP_IMPL(AllocVarData); }
+VarInfo *Heap::AllocVarInfo() { return CALL_HEAP_IMPL(AllocVarInfo); }
 TryCatchTable *Heap::AllocTryCatchTable() {
   return CALL_HEAP_IMPL(AllocTryCatchTable);
 }
-ExternVarData *Heap::AllocExternVarData() {
-  return CALL_HEAP_IMPL(AllocExternVarData);
+ExternVarInfo *Heap::AllocExternVarInfo() {
+  return CALL_HEAP_IMPL(AllocExternVarInfo);
 }
 SharedFunctionData *Heap::AllocSharedFunctionData() {
   return CALL_HEAP_IMPL(AllocSharedFunctionData);
@@ -325,6 +325,7 @@ GCTracer::GCTracer(uint8_t color) : m_color(color) {}
 
 void GCTracer::Trace(HeapObject *p) {
   if (p == nullptr) return;
+  if (p->m_gctag == m_color) return;
   p->m_gctag = m_color;
   p->m_interface->trace_ref(p, this);
 }

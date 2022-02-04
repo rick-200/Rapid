@@ -172,6 +172,7 @@
     <ClInclude Include="handle.h" />
     <ClInclude Include="heap.h" />
     <ClInclude Include="debug.h" />
+    <ClInclude Include="native_module.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="preprocessors.h" />
     <ClInclude Include="rapid.h" />

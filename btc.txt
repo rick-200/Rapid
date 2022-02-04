@@ -1,46 +1,88 @@
-fuction '#global'@000002915DC4A420, (7)slots:
-  instructions(72 bytes):
+fuction '#global'@00000268BE6C0050, (8)slots:
+  instructions(93 bytes):
     003: LOADK 0
     004: IMPORT
-    007: LOADK 1
-    010: LOADK 2
-    013: LOADL 1
-    016: LOADL 2
-    017: BAND
-    020: STOREL 1
-    023: LOADL 0
-    026: LOADK 3
-    029: LOADK 4
-    032: LOADL 1
-    035: THIS_CALL 2
-    036: POP
-    039: JMP 20
-    042: LOADL 0
-    045: LOADK 3
-    048: LOADK 5
-    051: LOADL 3
-    054: THIS_CALL 2
-    055: POP
-    056: POP
-    059: LOADL 0
-    062: LOADK 3
-    065: LOADK 6
-    068: THIS_CALL 1
-    069: POP
-    071: POPN 3
-    072: RETNULL
+    005: MAKE_ARRAY_0
+    008: CLOSURE 0
+    011: LOADK 1
+    014: LOADL 3
+    017: LOADK 2
+    018: LT
+    021: JMP_F 35
+    024: LOADL 1
+    027: LOADK 3
+    030: LOADL 2
+    033: LOADL 3
+    036: CALL 1
+    039: THIS_CALL 1
+    040: POP
+    043: LOADL 3
+    046: LOADK 4
+    047: ADD
+    050: STOREL 3
+    053: JMP -39
+    054: POP
+    057: LOADL 1
+    060: LOADK 1
+    061: GET_I
+    064: CALL 0
+    065: POP
+    068: LOADL 1
+    071: LOADK 4
+    072: GET_I
+    075: CALL 0
+    076: POP
+    079: LOADL 1
+    082: LOADK 5
+    083: GET_I
+    086: CALL 0
+    087: POP
+    090: CLOSE 0
+    092: POPN 3
+    093: RETNULL
   locals(4):
     0 console:0
-    1 a:1
-    2 b:2
-    3 e:3
-  consts(7):
+    1 arr:1
+    2 get_print_x:2
+    3 i:3
+  consts(6):
     0 'console'
-    1 1
-    2 0.1
-    3 'print'
-    4 'a'
-    5 'error'
-    6 'finally'
+    1 0
+    2 3
+    3 'push'
+    4 1
+    5 2
+  extern vars(0):
+  inner func(1):
+    0 'get_print_x'@00000268BE6BF3C0
+
+fuction 'get_print_x'@00000268BE6BF3C0, (3)slots:
+  instructions(7 bytes):
+    003: CLOSURE 0
+    006: LOADL 1
+    007: RET
+  locals(2):
+    0 x:0
+    1 print_x:1
+  consts(0):
+  extern vars(1):
+    0 console:true:0
+  inner func(1):
+    0 'print_x'@00000268BE6BF460
+
+fuction 'print_x'@00000268BE6BF460, (3)slots:
+  instructions(14 bytes):
+    003: LOADE 0
+    006: LOADK 0
+    009: LOADE 1
+    012: THIS_CALL 1
+    013: POP
+    014: RETNULL
+  locals(0):
+  consts(1):
+    0 'print'
+  extern vars(2):
+    0 console:false:0
+    1 x:true:0
   inner func(0):
 

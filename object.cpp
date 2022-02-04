@@ -45,6 +45,7 @@ Object* Array::invoke_memberfunc(Object* obj, String* name,
   }
   return Failure::NotImplemented;
 }
+
 // Table implement-------------------------------------------------------
 
 void Table::rehash_expand() {
@@ -151,6 +152,38 @@ void debug_print(FILE* f, Object* obj) {
     fprintf(f, "<unknown>");
   }
 }
+//------------------------------------------RapidObject----------------------------------------------
+
+//Object* RapidObject::get_property(Object* obj, String* name,
+//                                  AccessSpecifier spec) {
+//  RapidObject* _this = RapidObject::cast(obj);
+//  Object* ret;
+//  while (_this != nullptr) {
+//    ASSERT(spec == AccessSpecifier::Public || spec == AccessSpecifier::Protected ||
+//           spec == AccessSpecifier::Private);
+//    ret = _this->m_public.property->get(name);//×ÜÄÜ·ÃÎÊpublicÓò
+//    if (ret != nullptr) return ret;
+//    if (spec != AccessSpecifier::Public) {
+//      if (spec == AccessSpecifier::Protected) {
+//        ret = _this->m_protected.property->get(name);
+//        if (ret != nullptr) return ret;
+//      } else {
+//        ret = _this->m_private.property->get(name);
+//        if (ret != nullptr) return ret;
+//      }
+//    }
+//    spec = AccessSpecifier::Protected;
+//    _this = _this->parent;
+//  }
+//  
+//  return nullptr;
+//}
+//
+//Object* RapidObject::set_property(Object* obj, String* name, Object* val,
+//                                  AccessSpecifier spec) {
+//  return nullptr;
+//}
+//------------------------------------------------------------------------------------
 
 }  // namespace internal
 }  // namespace rapid

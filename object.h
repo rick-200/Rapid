@@ -34,8 +34,8 @@ namespace internal {
     - FunctionData
     - Exception
     - Struct
-      - VarData
-      - ExternVarData
+      - VarInfo
+      - ExternVarInfo
 */
 #define ITER_HEAPOBJ_DERIVED_FINAL(V) \
   V(SpecialValue)                     \
@@ -51,14 +51,14 @@ namespace internal {
   V(NativeFunction)                   \
   V(NativeObject)                     \
   V(FunctionData)                     \
-  V(VarData)                          \
-  V(ExternVarData)                    \
+  V(VarInfo)                          \
+  V(ExternVarInfo)                    \
   V(ExternVar)                        \
-  V(SharedFunctionData) V(TryCatchTable) V(StackTraceData)
+  V(SharedFunctionData) V(TryCatchTable) V(StackTraceData) /*V(RapidObject) */
 
 #define ITER_STRUCT_DERIVED(V) \
-  V(VarData)                   \
-  V(ExternVarData)             \
+  V(VarInfo)                   \
+  V(ExternVarInfo)             \
   V(ExternVar)                 \
   V(SharedFunctionData) V(FunctionData) V(TryCatchTable) V(StackTraceData)
 
@@ -104,10 +104,11 @@ enum class HeapObjectType : uint8_t {
   Exception,
   NativeObject,
   NativeFunction,
+  RapidObject,
   Flag_Struct_Start,
   Struct,
-  VarData,
-  ExternVarData,
+  VarInfo,
+  ExternVarInfo,
   ExternVar,
   TryCatchTable,
   SharedFunctionData,
@@ -793,20 +794,25 @@ class InstructionArray : public HeapObject {
   Cmd *begin() { return m_data; }
 };
 
-
 struct AccessDomain {
   FixedTable *property;
   FixedTable *memberfunc;
 };
-class RapidObject : public HeapObject {
-  Object *parent;
-  AccessDomain m_public;
-  AccessDomain m_protected;
-  AccessDomain m_private;
-
- public:
-
-};
+// class RapidObject : public HeapObject {
+//  RapidObject *parent;
+//  AccessDomain m_public;
+//  AccessDomain m_protected;
+//  AccessDomain m_private;
+//
+// private:
+//  static Object *get_property(Object *obj, String *name, AccessSpecifier
+//  spec); static Object *set_property(Object *obj, String *name, Object *val,
+//                              AccessSpecifier spec);
+//
+// public:
+//  OBJECT_DEF(RapidObject)
+//  DEF_CAST(RapidObject)
+//};
 
 //包含简单数据的对象的基类
 class Struct : public HeapObject {
@@ -823,44 +829,49 @@ class Struct : public HeapObject {
   }
 #define _M(_m) _this->_m
 #define _M_C(_m) this->_m = nullptr;
-class VarData : public Struct {
+class VarInfo : public Struct {
  public:
   String *name;
   uint16_t slot_id;
 
  private:
-  DECL_TRACEREF(VarData, _M(name));
+  DECL_TRACEREF(VarInfo, _M(name));
 
  public:
-  OBJECT_DEF(VarData)
-  DEF_CAST(VarData)
+  OBJECT_DEF(VarInfo)
+  DEF_CAST(VarInfo)
 };
-class ExternVarData : public Struct {
+class ExternVarInfo : public Struct {
  public:
   String *name;
-  bool in_stack;
-  uint8_t pos;
+  bool
+      in_stack;  //变量是否存在于外层函数的栈中（否则存在于外层函数的extern_var中）
+  uint16_t pos;  //所在栈或extern_var的位置
 
  private:
-  DECL_TRACEREF(ExternVarData, _M(name));
+  DECL_TRACEREF(ExternVarInfo, _M(name));
 
  public:
-  OBJECT_DEF(ExternVarData)
-  DEF_CAST(ExternVarData)
+  OBJECT_DEF(ExternVarInfo)
+  DEF_CAST(ExternVarInfo)
 };
 
 class ExternVar : public Struct {
  public:
-  Object *value;
-  bool in_stack;
-  uint8_t pos;
+  Object **value_ref;  //外部变量的引用，应通过value_ref访问和修改变量
+  union {
+    Object *value;  //当所在函数退出时，用于保存变量的值，不应通过value访问变量
+    ExternVar *
+        next;  //当所在函数未退出时，所有属于此函数栈的ExternVar构成一个链表，用于查询
+  } un;
 
  private:
-  DECL_TRACEREF(ExternVar, _M(value));
+  DECL_TRACEREF(ExternVar, _M(un.value));
 
  public:
   OBJECT_DEF(ExternVar)
   DEF_CAST(ExternVar)
+  bool is_open() { return value_ref != &un.value; }
 };
 struct TryCatchInfo {
   uint32_t begin, end;
@@ -881,7 +892,6 @@ class SharedFunctionData : public Struct {
   FixedArray *inner_func;
   FixedArray *vars;
   FixedArray *extvars;
-
   size_t max_stack;
   size_t param_cnt;
 
@@ -897,9 +907,11 @@ class FunctionData : public Struct {
  public:
   SharedFunctionData *shared_data;
   FixedArray *extvars;
+  ExternVar *open_extvar_head;
 
  private:
-  DECL_TRACEREF(FunctionData, _M(shared_data), _M(extvars));
+  DECL_TRACEREF(FunctionData, _M(shared_data), _M(extvars),
+                _M(open_extvar_head));
 
  public:
   OBJECT_DEF(FunctionData)
@@ -928,6 +940,7 @@ class Exception : public HeapObject {
   String *m_info;
   Object *m_data;
   Array *m_stacktrace;
+
  private:
   static void trace_ref(Object *obj, GCTracer *gct) {
     Exception *_this = Exception::cast(obj);
@@ -943,8 +956,6 @@ class Exception : public HeapObject {
   DEF_R_ACCESSOR(data);
   DEF_R_ACCESSOR(stacktrace);
 };
-
-
 
 void debug_print(FILE *f, Object *obj);
 

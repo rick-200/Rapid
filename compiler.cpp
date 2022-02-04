@@ -546,6 +546,10 @@ void CodeGenerator::VisitBlockStat(BlockStat *p) {
   EnterScope();
   for (auto node : p->stat) {
     Visit(node);
+    if (node->type == AstNodeType::ReturnStat) {
+      LeaveScope(false);//无需清理，RET指令会做清理工作
+      return;
+    }
   }
   LeaveScope();
 }
@@ -605,21 +609,25 @@ void CodeGenerator::VisitLoopStat(LoopStat *p) {
 
 void CodeGenerator::VisitVarDecl(VarDecl *p) {
   for (auto decl : p->decl) {
-    uint16_t pos = AddVar(decl.name);
+    AddVar(decl.name);
     if (decl.init) {
       Visit(decl.init);
       // AppendOp(Opcode::PUSH); -- 不需要
     } else {
       AppendOp(Opcode::PUSH_NULL);
+      push();
     }
   }
 }
 
 void CodeGenerator::VisitFuncDecl(FuncDecl *p) {
+  ASSERT(ctx != nullptr);
   FunctionCtx *fc = AllocFunctionCtx();
   fc->name = p->name;
+  fc->outer_func = ctx;
   fc->param_cnt = p->param.size();
   fc->top = fc->max_stack = p->param.size();
+  AddVar(p->name);
   for (size_t i = 0; i < p->param.size(); i++) {
     VarCtx vc;
     vc.name = p->param[i];
@@ -627,22 +635,17 @@ void CodeGenerator::VisitFuncDecl(FuncDecl *p) {
     fc->var.push(vc);
     fc->allvar.push(vc);
   }
-  if (ctx == nullptr) {
-    ctx = fc;
-    Visit(p->body);
-    if (ctx->cmd.size() == 0 || ctx->cmd.back() != (uint8_t)Opcode::RET) {
-      AppendOp(Opcode::RETNULL);
-    }
-  } else {
-    ctx->inner_func.push(fc);
-    FunctionCtx *upper = ctx;
-    ctx = fc;
-    Visit(p->body);
-    if (ctx->cmd.size() == 0 || ctx->cmd.back() != (uint8_t)Opcode::RET) {
-      AppendOp(Opcode::RETNULL);
-    }
-    ctx = upper;
+  uint16_t fdp = ctx->inner_func.size();
+  ctx->inner_func.push(fc);
+  FunctionCtx *upper = ctx;
+  ctx = fc;
+  Visit(p->body);
+  if (ctx->cmd.size() == 0 || ctx->cmd.back() != (uint8_t)Opcode::RET) {
+    AppendOp(Opcode::RETNULL);
   }
+  ctx = upper;
+  Closure(fdp);
+  // TODO：整理trycatch块，把catch代码都放到函数末尾
 }
 
 void CodeGenerator::VisitReturnStat(ReturnStat *p) {
@@ -668,34 +671,33 @@ void CodeGenerator::VisitContinueStat(ContinueStat *p) {
 }
 
 void CodeGenerator::VisitTryCatchStat(TryCatchStat *p) {
+  ASSERT(0);  //先解决闭包，然后catch块直接编译成一个闭包函数
   Codepos try_begin = CurrentPos();
-  Visit(p->try_);  // try本身带scope
-  Codepos jmp = PrepareJump();
+  VisitBlockStat(p->try_);  // try本身带scope
   Codepos try_end = CurrentPos();
+
   EnterScope();
   AddVar(p->err_var_name);
   Visit(p->catch_);
   LeaveScope();
-  ApplyJump(jmp, CurrentPos());
-  if (p->finally_ != nullptr) Visit(p->finally_);  // finally本身带scope
+  Codepos catch_end = CurrentPos();
+
+  if (p->finally_ != nullptr)
+    VisitBlockStat(p->finally_);  // finally本身带scope
+
   TryCatchCtx tcc;
-  tcc.begin = (uint32_t)try_begin;
-  tcc.end = (uint32_t)try_end;
+  tcc.try_begin = (uint32_t)try_begin;
+  tcc.try_end = (uint32_t)try_end;
+  tcc.catch_begin = (uint32_t)try_end;
+  tcc.catch_end = (uint32_t)catch_end;
   ctx->try_catch.push(tcc);
 }
 
 void CodeGenerator::VisitVarExpr(VarExpr *p) {
-  if (String::Equal(*p->name, *ctx->name)) {
-    AppendOp(Opcode::CLOSURE_SELF);
-    push();
-    return;
-  }
   if (LoadL(p->name)) return;
-  if (Closure(p->name)) return;
+  if (LoadE(p->name)) return;
   error_symbol_notfound(p);
   ASSERT(0);
-  VERIFY(0);
-  // TODO: extvar
 }
 
 void CodeGenerator::VisitMemberExpr(MemberExpr *p) {
@@ -916,14 +918,16 @@ void CodeGenerator::VisitAssignExpr(AssignExpr *p, bool from_expr_stat) {
   }
 
   if (p->left->type == AstNodeType::VarExpr) {
-    uint16_t pos = FindVar(((VarExpr *)p->left)->name);
-    if (pos == invalid_pos) {
+    Handle<String> name = ((VarExpr *)p->left)->name;
+    uint16_t pos;
+    if ((pos = FindVar(name)) != invalid_pos) {
+      StoreL(pos);
+    } else if ((pos = FindExternVar(name)) != invalid_pos) {
+      StoreE(pos);
+    } else {
       error_symbol_notfound((VarExpr *)p->left);
       ASSERT(0);
     }
-    AppendOp(Opcode::STOREL);
-    AppendU16(FindVar(((VarExpr *)p->left)->name));
-    pop();
   } else if (p->left->type == AstNodeType::MemberExpr) {
     Visit(((MemberExpr *)p->left)->target);
     LoadK(((MemberExpr *)p->left)->name);

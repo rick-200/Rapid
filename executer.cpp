@@ -48,21 +48,13 @@ class Stack {
   Object *m_data;
   size_t size;
 };
-enum class CallType {
-  FullCall,       //调用FunctionData
-  StatelessCall,  //调用SharedFunctionData，即函数不访问外部变量
-  NativeCall,     //从C++调用脚本函数，用于获取返回值
-};
 struct CallInfo {
-  CallType t;
-  union {
-    FunctionData *fd;
-    SharedFunctionData *sfd;
-    NativeFunction *nf;
-  };
+  bool is_script_call;  //从脚本代码执行的调用
+  FunctionData *fd;
   Object *this_object;
   StackOffset base;  //栈底
   StackOffset top;   // top指向栈顶元素（不是栈顶+1）
+                     //栈空间为[base,top]闭区间
   byte *pc;          //当前字节码指针
 };
 
@@ -85,6 +77,19 @@ String *NewString(const char *str) {
   DEBUG_GC;
   String *s = Heap::AllocString(str, strlen(str));
   return s;
+}
+FunctionData *NewFunctionData(SharedFunctionData *sfd) {
+  DEBUG_GC;
+  FunctionData *fd = Heap::AllocFunctionData();
+  fd->shared_data = sfd;
+  fd->open_extvar_head = nullptr;
+  fd->extvars = Heap::AllocFixedArray(sfd->extvars->length());
+  return fd;
+}
+ExternVar *NewExternVar() {
+  DEBUG_GC;
+  ExternVar *ev = Heap::AllocExternVar();
+  return ev;
 }
 
 #define I(_obj) (Integer::cast(_obj)->value())
@@ -251,33 +256,22 @@ class ExecuterImpl : public Executer {
 #endif
 
  private:
-  //若fd不为null，填充FullCall，且sfd需等于fd->shared_data
-  //否则填充StatelessCall
-  void fill_runtime_info(CallInfo *ci, FunctionData *fd,
-                         SharedFunctionData *sfd, StackOffset base) {
-    if (fd != nullptr) {
-      ASSERT(fd->shared_data == sfd);
-      ci->t = CallType::FullCall;
-      ci->fd = fd;
-    } else {
-      ci->t = CallType::StatelessCall;
-      ci->sfd = sfd;
-    }
-    ci->base = base;
-    ci->top = AddOffset(
-        base, sfd->param_cnt - 1 /*top为栈顶位置，栈长(top-base+1)，应减去1*/);
-    ci->pc = sfd->instructions->begin();
-  }
-
   bool prepare_call(StackOffset top, size_t param_cnt, Object *this_obj,
-                    FunctionData *fd, SharedFunctionData *sfd) {
-    if (sfd->param_cnt != param_cnt) {  //参数不匹配
+                    FunctionData *fd) {
+    if (fd->shared_data->param_cnt != param_cnt) {  //参数不匹配
       return false;
     }
     StackOffset new_base = AddOffset(top, 1);
-    m_stack.Reserve(new_base, sfd->max_stack);
+    m_stack.Reserve(new_base, fd->shared_data->max_stack);
+
     CallInfo new_ci;
-    fill_runtime_info(&new_ci, fd, sfd, new_base);
+    new_ci.is_script_call = true;
+    new_ci.fd = fd;
+    new_ci.base = new_base;
+    new_ci.top =
+        AddOffset(new_base, fd->shared_data->param_cnt -
+                                1 /*top为栈顶位置，栈长(top-base+1)，应减去1*/);
+    new_ci.pc = fd->shared_data->instructions->begin();
     new_ci.this_object = this_obj;
     list_ci.push(new_ci);
   }
@@ -289,20 +283,12 @@ class ExecuterImpl : public Executer {
       list_ci.back().top = m_stack.GetOffset(*ptr_top);  //写回
     for (const auto &ci : list_ci) {
       fprintf(dbg_f, "CallInfo: ");
-      switch (ci.t) {
-        case CallType::FullCall:
-          fprintf(dbg_f, "FullCall<%p:'%s'@%p>\n", ci.fd,
-                  ci.fd->shared_data->name->cstr(), ci.fd->shared_data);
-          break;
-        case CallType::StatelessCall:
-          fprintf(dbg_f, "StatelessCall<'%s'@%p>\n", ci.sfd->name->cstr(),
-                  ci.sfd);
-          break;
-        case CallType::NativeCall:
-          fprintf(dbg_f, "NativeCall\n");
-          break;
+      if (ci.is_script_call) {
+        fprintf(dbg_f, "FullCall<%p:'%s'@%p>\n", ci.fd,
+                ci.fd->shared_data->name->cstr(), ci.fd->shared_data);
+      } else {
+        fprintf(dbg_f, "NativeCall\n");
       }
-
       for (size_t i = static_cast<size_t>(ci.base);
            i <= static_cast<size_t>(ci.top); i++) {
         fprintf(dbg_f, "  [%llu:%llu] ", i, i - static_cast<size_t>(ci.base));
@@ -315,29 +301,56 @@ class ExecuterImpl : public Executer {
   }
 #endif  //  _DEBUG
 
+  void close_extern_var(ExternVar **head, Object **target_ref) {
+    ExternVar *p = *head;
+    if (p == nullptr) return;
+    if (p->value_ref == target_ref) {
+      *head = p->un.next;
+      p->un.value = *target_ref;
+      p->value_ref = &p->un.value;
+      return;
+    }
+    if (p->un.next == nullptr) return;
+    ExternVar *ppre = p;
+    p = p->un.next;
+    while (p != nullptr) {
+      ASSERT(p->is_open());
+      if (p->value_ref == target_ref) {
+        ppre->un.next = p->un.next;
+        p->un.value = *target_ref;
+        p->value_ref = &p->un.value;
+        return;
+      }
+      ppre = p;
+      p = p->un.next;
+    }
+  }
+  void close_all_extern_var(ExternVar **head) {
+    ExternVar *p = *head;
+    while (p != nullptr) {
+      ExternVar *pnxt = p->un.next;
+      p->un.value = *p->value_ref;
+      p->value_ref = &p->un.value;
+      p = pnxt;
+    }
+    *head = nullptr;
+  }
+
   //执行最顶上的CallInfo，直到CallType为NativeCall
   void Execute() {
   l_begin:
     CallInfo *ci = &list_ci.back();
+    if (!ci->is_script_call) return;
     byte *pc = ci->pc;
     // top指向栈顶元素（不是栈顶+1）
     // top还用于标识gc范围，应在每条指令结束后再调整top指针
     Object **top = m_stack.GetRawPtr(ci->top);
     ptr_top = &top;  //更新ptr_top，用于gc
     Object **base = m_stack.GetRawPtr(ci->base);
-    Object **kpool;
-    Object **inner_func;
-    if (ci->t == CallType::FullCall) {
-      kpool = ci->fd->shared_data->kpool->begin();
-      inner_func = ci->fd->shared_data->inner_func->begin();
-    } else if (ci->t == CallType::StatelessCall) {
-      kpool = ci->sfd->kpool->begin();
-      inner_func = ci->sfd->inner_func->begin();
-    } else {
-      ASSERT(ci->t == CallType::NativeCall);
-      return;  //直接返回
-    }
-
+    Object **kpool = ci->fd->shared_data->kpool->begin();
+    Object **inner_func = ci->fd->shared_data->inner_func->begin();
+    ExternVar **extern_var =
+        reinterpret_cast<ExternVar **>(ci->fd->extvars->begin());
     while (true) {
 #if (DEBUG_LOG_EXEC_INFO)
       char buff[32];
@@ -358,8 +371,16 @@ class ExecuterImpl : public Executer {
           base[*(uint16_t *)pc] = *top--;
           pc += 2;
           break;
+        case Opcode::STOREE:
+          *extern_var[*(uint16_t *)pc]->value_ref = *top--;
+          pc += 2;
+          break;
         case Opcode::LOADK:
           *++top = kpool[*(uint16_t *)pc];
+          pc += 2;
+          break;
+        case Opcode::LOADE:
+          *++top = *extern_var[*(uint16_t *)pc]->value_ref;
           pc += 2;
           break;
         case Opcode::LOAD_THIS:
@@ -379,6 +400,10 @@ class ExecuterImpl : public Executer {
         case Opcode::POPN:
           top -= *(uint8_t *)pc;
           ++pc;
+          break;
+        case Opcode::CLOSE:
+          close_extern_var(&ci->fd->open_extvar_head, base + *(uint16_t *)pc);
+          pc += 2;
           break;
         case Opcode::IMPORT:
           if (m_module->exists(String::cast(top[0]))) {
@@ -565,11 +590,7 @@ class ExecuterImpl : public Executer {
           StackOffset off_top = m_stack.GetOffset(top);
           if (top[0]->IsFunctionData()) {
             FunctionData *fd = FunctionData::cast(top[0]);
-            prepare_call(off_top, cnt, this_obj, fd, fd->shared_data);
-            goto l_to_begin;
-          } else if (top[0]->IsSharedFunctionData()) {  //无状态调用
-            SharedFunctionData *sfd = SharedFunctionData::cast(top[0]);
-            prepare_call(off_top, cnt, this_obj, nullptr, sfd);
+            prepare_call(off_top, cnt, this_obj, fd);
             goto l_to_begin;
           } else if (top[0]->IsNativeFunction()) {
             Parameters param(this_obj, top + 1, cnt);
@@ -580,46 +601,70 @@ class ExecuterImpl : public Executer {
           break;
         }
         case Opcode::RET:
+          close_all_extern_var(&ci->fd->open_extvar_head);
           list_ci.pop();
           m_stack.GetRawPtr(list_ci.back().top)[0] =
               top[0];  //返回值保存至上一层调用的栈顶
           goto l_to_begin;
           break;
         case Opcode::RETNULL:
+          close_all_extern_var(&ci->fd->open_extvar_head);
           list_ci.pop();
           m_stack.GetRawPtr(list_ci.back().top)[0] =
               nullptr;  //返回值保存至上一层调用的栈顶
           goto l_to_begin;
           break;
         case Opcode::CLOSURE: {
-          SharedFunctionData *sfd =
-              SharedFunctionData::cast(inner_func[*(uint16_t *)pc]);
+          FunctionData *fd = NewFunctionData(
+              SharedFunctionData::cast(inner_func[*(uint16_t *)pc]));
           pc += 2;
-          if (sfd->extvars->length() == 0) {
-            *++top = sfd;
-          } else {
-            FunctionData *fd = Heap::
-                AllocFunctionData();  // TODO:处理AllocFunctionData失败的情况
-            fd->shared_data = sfd;
-            *++top = fd;
+          *++top = fd;
+          for (size_t i = 0; i < fd->shared_data->extvars->length(); i++) {
+            ExternVarInfo *evi =
+                ExternVarInfo::cast(fd->shared_data->extvars->get(i));
+            if (!evi->in_stack) {  //在此函数的外部变量数组中
+              fd->extvars->set(i, ci->fd->extvars->get(evi->pos));
+              continue;
+            }
+
+            //在此函数的栈上
+            //先在打开的外部变量链表中搜索
+
+            ExternVar *p = ci->fd->open_extvar_head;
+            Object **stack_value_ref = base + evi->pos;
+            while (p != nullptr && p->value_ref != stack_value_ref) {
+              p = p->un.next;
+            }
+            if (p != nullptr &&
+                p->value_ref ==
+                    stack_value_ref) {  //在打开的外部变量链表中，直接添加
+
+              fd->extvars->set(i, p);
+            } else {  //不在打开的外部变量链表中，创建并添加到链表
+              ExternVar *ev = NewExternVar();
+              ev->value_ref = stack_value_ref;
+              ev->un.next = ci->fd->open_extvar_head;
+              ci->fd->open_extvar_head = ev;
+              fd->extvars->set(i, ev);
+            }
           }
           break;
         }
-        case Opcode::CLOSURE_SELF: {
-          ASSERT(ci->t == CallType::FullCall ||
-                 ci->t == CallType::StatelessCall);
-          SharedFunctionData *sfd =
-              ci->t == CallType::FullCall ? ci->fd->shared_data : ci->sfd;
-          if (sfd->extvars->length() == 0) {
-            *++top = sfd;
-          } else {
-            FunctionData *fd = Heap::
-                AllocFunctionData();  // TODO:处理AllocFunctionData失败的情况
-            fd->shared_data = sfd;
-            *++top = fd;
-          }
-          break;
-        }
+        // case Opcode::CLOSURE_SELF: {
+        //  ASSERT(ci->t == CallType::FullCall ||
+        //         ci->t == CallType::StatelessCall);
+        //  SharedFunctionData *sfd =
+        //      ci->t == CallType::FullCall ? ci->fd->shared_data : ci->sfd;
+        //  if (sfd->extvars->length() == 0) {
+        //    *++top = sfd;
+        //  } else {
+        //    FunctionData *fd = Heap::
+        //        AllocFunctionData();  // TODO:处理AllocFunctionData失败的情况
+        //    fd->shared_data = sfd;
+        //    *++top = fd;
+        //  }
+        //  break;
+        //}
         default:
           ASSERT(0);
       }
@@ -657,9 +702,8 @@ class ExecuterImpl : public Executer {
   //  }
   //}
 
-  Object *CallFunction(FunctionData *fd, SharedFunctionData *sfd,
-                       const RawParameters &param) {
-    if (sfd->param_cnt != param.count()) {
+  Object *CallFunction(FunctionData *fd, const RawParameters &param) {
+    if (fd->shared_data->param_cnt != param.count()) {
       VERIFY(0);  // TODO;
     }
     StackOffset base;
@@ -668,28 +712,25 @@ class ExecuterImpl : public Executer {
     } else {
       base = AddOffset(list_ci.back().top, 1);
     }
-    m_stack.Reserve(base, sfd->max_stack + 1 /*返回值*/);
+    m_stack.Reserve(base, fd->shared_data->max_stack + 1 /*返回值*/);
 
     CallInfo native_ci;
-    native_ci.t = CallType::NativeCall;
+    native_ci.is_script_call = false;
     native_ci.base = base;
     native_ci.top = base;
     m_stack.GetRawPtr(base)[0] = nullptr;
     list_ci.push(native_ci);
+
+    prepare_call(base, param.count(), param.get_this(), fd);
 
     base = AddOffset(base, 1);
 
     Object **pbase = m_stack.GetRawPtr(base);
     for (size_t i = 0; i < param.count(); i++) pbase[i] = param[i];
 
-    CallInfo ci;
-    fill_runtime_info(&ci, fd, sfd, base);
-    ci.this_object = param.get_this();
-    list_ci.push(ci);
-
     Execute();
 
-    ASSERT(list_ci.back().t == CallType::NativeCall);
+    ASSERT(!list_ci.back().is_script_call);
     ASSERT(list_ci.back().base == native_ci.base);
 
     list_ci.pop();
@@ -718,15 +759,12 @@ class ExecuterImpl : public Executer {
     gct->Trace(this->m_module);
     if (list_ci.empty()) return;
     if (ptr_top != nullptr) {
-      ASSERT(list_ci.back().t != CallType::NativeCall);
+      ASSERT(list_ci.back().is_script_call);
       // ASSERT(list_ci.back().top<=)
       list_ci.back().top = m_stack.GetOffset(*ptr_top);  //写回
     }
     for (const auto &ci : list_ci) {
-      if (ci.t == CallType::FullCall)
-        gct->Trace(ci.fd);
-      else if (ci.t == CallType::StatelessCall)
-        gct->Trace(ci.sfd);
+      if (ci.is_script_call) gct->Trace(ci.fd);
     }
     size_t top = static_cast<size_t>(list_ci.back().top);
     for (size_t i = static_cast<size_t>(0); i <= top; i++) {
@@ -743,13 +781,9 @@ class ExecuterImpl : public Executer {
   }
   Handle<Exception> GetException() { return Handle<Exception>(err); }
   bool HasException() { return err != nullptr; }
-  Handle<Object> CallFunction(Handle<SharedFunctionData> sfd,
-                              const Parameters &param) {
-    return Handle<Object>(CallFunction(nullptr, *sfd, param));
-  }
   Handle<Object> CallFunction(Handle<FunctionData> fd,
                               const Parameters &param) {
-    return Handle<Object>(CallFunction(*fd, fd->shared_data, param));
+    return Handle<Object>(CallFunction(*fd, param));
   }
   void RegisterModule(Handle<String> name, Handle<Object> md) {
     m_module->set(*name, *md);
@@ -771,10 +805,6 @@ Handle<Exception> Executer::GetException() {
   return CALL_EXECUTER_IMPL(GetException);
 }
 bool Executer::HasException() { return CALL_EXECUTER_IMPL(HasException); }
-Handle<Object> Executer::CallFunction(Handle<SharedFunctionData> sfd,
-                                      const Parameters &param) {
-  return CALL_EXECUTER_IMPL(CallFunction, sfd, param);
-}
 Handle<Object> Executer::CallFunction(Handle<FunctionData> fd,
                                       const Parameters &param) {
   return CALL_EXECUTER_IMPL(CallFunction, fd, param);

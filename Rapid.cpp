@@ -100,15 +100,15 @@ void test_compile(Handle<String> code) {
   fclose(f);
 
   CodeGenerator cg;
-  Handle<SharedFunctionData> sfd = cg.Generate(ast);
-  if (sfd.empty()) {
+  Handle<FunctionData> fd = cg.Generate(ast);
+  if (fd.empty()) {
     printf(Executer::GetException()->info()->cstr());
     fflush(stdout);
     exit(0);
   }
 
   f = fopen("btc.txt", "w");
-  fprintf(f, "%s", VisualizeByteCode(sfd)->cstr());
+  fprintf(f, "%s", VisualizeByteCode(Handle<SharedFunctionData>(fd->shared_data))->cstr());
   fclose(f);
   Executer::RegisterModule(Factory::NewString("console"),
                            stdmodule::GetConsoleModule());
@@ -116,11 +116,33 @@ void test_compile(Handle<String> code) {
 
   std::chrono::high_resolution_clock::time_point t =
       std::chrono::high_resolution_clock::now();
-  Handle<Object> ret = Executer::CallFunction(sfd, param);
+  Handle<Object> ret = Executer::CallFunction(fd, param);
   std::chrono::nanoseconds tt = std::chrono::high_resolution_clock::now() - t;
   printf("%lldus.\n", tt.count() / 1000);
 }
+
+//void test_alloc() {
+//  int x = 0;
+//
+//  std::chrono::high_resolution_clock::time_point t =
+//      std::chrono::high_resolution_clock::now();
+//  for (int i = 0; i < 100000000; i++) x ^= i;
+//  std::chrono::nanoseconds tt1 = std::chrono::high_resolution_clock::now() - t;
+//  t = std::chrono::high_resolution_clock::now();
+//  for (int i = 0; i < 100000000; i++) {
+//    void* p = malloc(sizeof(FunctionData));
+//    free(p);
+//    x ^= i;
+//  }
+//  std::chrono::nanoseconds tt2 = std::chrono::high_resolution_clock::now() - t;
+//  printf("%d\n", x);
+//  printf("%llums.\n%llums.\n", tt1.count() / 1000 / 1000,
+//         tt2.count() / 1000 / 1000);
+//}
+
 int main() {
+  //test_alloc();
+  //return 0;
   freopen("log.txt", "w", stderr);
   FILE* f = fopen("test.ra", "r");
   size_t siz = fread(buff, 1, 1024 * 1024 * 128, f);

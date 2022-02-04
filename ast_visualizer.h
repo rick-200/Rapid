@@ -287,13 +287,21 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
   sb.AppendFormat("  locals(%llu):\n", sfd->vars->length());
   for (size_t i = 0; i < sfd->vars->length(); i++) {
     sb.AppendFormat("    %llu %s:%d\n", i,
-                    VarData::cast(sfd->vars->get(i))->name->cstr(),
-                    VarData::cast(sfd->vars->get(i))->slot_id);
+                    VarInfo::cast(sfd->vars->get(i))->name->cstr(),
+                    VarInfo::cast(sfd->vars->get(i))->slot_id);
   }
   sb.AppendFormat("  consts(%llu):\n", sfd->kpool->length());
   for (size_t i = 0; i < sfd->kpool->length(); i++) {
     sb.AppendFormat("    %llu ", i);
     sb.AppendObject(Handle<Object>(sfd->kpool->get(i))).AppendString("\n");
+  }
+  sb.AppendFormat("  extern vars(%llu):\n", sfd->extvars->length());
+  for (size_t i = 0; i < sfd->extvars->length(); i++) {
+    sb.AppendFormat(
+        "    %llu %s:%s:%d\n", i,
+        ExternVarInfo::cast(sfd->extvars->get(i))->name->cstr(),
+        ExternVarInfo::cast(sfd->extvars->get(i))->in_stack ? "true" : "false",
+        ExternVarInfo::cast(sfd->extvars->get(i))->pos);
   }
   sb.AppendFormat("  inner func(%llu):\n", sfd->inner_func->length());
   for (size_t i = 0; i < sfd->inner_func->length(); i++) {
