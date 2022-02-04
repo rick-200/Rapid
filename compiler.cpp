@@ -11,16 +11,9 @@ namespace internal {
 //  return (... && __char_equal(s1, s2, Idx));
 //}
 // template <size_t LEN>
-// constexpr bool strnequal(const char* ps, const char (&pkw)[LEN]) {
+// constexpr bool whole_string_nequal(const char* ps, const char (&pkw)[LEN]) {
 //  return __strnequal_impl(ps, pkw, std::make_index_sequence<LEN - 1>{});
 //}
-
-template <size_t LEN>
-constexpr bool strnequal(const char *ps, const char (&pkw)[LEN]) {
-  for (size_t i = 0; i < LEN - 1; i++)
-    if (ps[i] != pkw[i]) return false;
-  return true;
-}
 
 struct __char_check_t {
   static constexpr uint8_t Alphabet = 1;
@@ -49,6 +42,15 @@ static constexpr __char_check_t char_check;
 inline bool is_allowed_symbol_suffix(char c) {
   return char_check.is_allowed_symbol_suffix(c);
 }
+template <size_t LEN>
+constexpr bool whole_string_nequal(const char *ps, const char (&pkw)[LEN]) {
+  if (is_allowed_symbol_suffix(ps[LEN-1])) return false;
+  for (size_t i = 0; i < LEN - 1; i++)
+    if (ps[i] != pkw[i]) return false;
+  return true;
+}
+
+
 
 void TokenStream::Step(int step) {
   for (int i = 0; i < step; i++) {
@@ -334,17 +336,17 @@ l_begin_switch:
       }
       break;
     case '|':
-      if (strnequal(ps, "|")) {
+      if (whole_string_nequal(ps, "|")) {
         InitToken(TokenType::BOR);
         Step(1);
-      } else if (strnequal(ps, "|=")) {
+      } else if (whole_string_nequal(ps, "|=")) {
         InitToken(TokenType::BOR_ASSIGN);
         Step(2);
       }
       break;
 
     case 'b':
-      if (strnequal(ps, "break")) {
+      if (whole_string_nequal(ps, "break")) {
         InitToken(TokenType::BREAK);
         Step(5);
       } else {
@@ -352,13 +354,13 @@ l_begin_switch:
       }
       break;
     case 'c':
-      if (strnequal(ps, "catch")) {
+      if (whole_string_nequal(ps, "catch")) {
         InitToken(TokenType::CATCH);
         Step(5);
-      } else if (strnequal(ps, "const")) {
+      } else if (whole_string_nequal(ps, "const")) {
         InitToken(TokenType::CONST);
         Step(5);
-      } else if (strnequal(ps, "continue")) {
+      } else if (whole_string_nequal(ps, "continue")) {
         InitToken(TokenType::CONTINUE);
         Step(8);
       } else {
@@ -366,10 +368,10 @@ l_begin_switch:
       }
       break;
     case 'e':
-      if (strnequal(ps, "else")) {
+      if (whole_string_nequal(ps, "else")) {
         InitToken(TokenType::ELSE);
         Step(4);
-      } else if (strnequal(ps, "export")) {
+      } else if (whole_string_nequal(ps, "export")) {
         InitToken(TokenType::EXPORT);
         Step(6);
       } else {
@@ -377,17 +379,17 @@ l_begin_switch:
       }
       break;
     case 'f':
-      if (strnequal(ps, "for")) {
+      if (whole_string_nequal(ps, "for")) {
         InitToken(TokenType::FOR);
         Step(3);
-      } else if (strnequal(ps, "func")) {
+      } else if (whole_string_nequal(ps, "func")) {
         InitToken(TokenType::FUNC);
         Step(4);
-      } else if (strnequal(ps, "false")) {
+      } else if (whole_string_nequal(ps, "false")) {
         InitToken(TokenType::KVAL);
         t.v = Factory::FalseValue();
         Step(5);
-      } else if (strnequal(ps, "finally")) {
+      } else if (whole_string_nequal(ps, "finally")) {
         InitToken(TokenType::FINALLY);
         Step(7);
       } else {
@@ -395,10 +397,10 @@ l_begin_switch:
       }
       break;
     case 'i':
-      if (strnequal(ps, "if")) {
+      if (whole_string_nequal(ps, "if")) {
         InitToken(TokenType::IF);
         Step(2);
-      } else if (strnequal(ps, "import")) {
+      } else if (whole_string_nequal(ps, "import")) {
         InitToken(TokenType::IMPORT);
         Step(6);
       } else {
@@ -406,7 +408,7 @@ l_begin_switch:
       }
       break;
     case 'r':
-      if (strnequal(ps, "return")) {
+      if (whole_string_nequal(ps, "return")) {
         InitToken(TokenType::RETURN);
         Step(6);
       } else {
@@ -414,14 +416,14 @@ l_begin_switch:
       }
       break;
     case 't':
-      if (strnequal(ps, "try")) {
+      if (whole_string_nequal(ps, "try")) {
         InitToken(TokenType::TRY);
         Step(3);
-      } else if (strnequal(ps, "true")) {
+      } else if (whole_string_nequal(ps, "true")) {
         InitToken(TokenType::KVAL);
         t.v = Factory::TrueValue();
         Step(4);
-      } else if (strnequal(ps, "this")) {
+      } else if (whole_string_nequal(ps, "this")) {
         InitToken(TokenType::THIS);
         Step(4);
       } else {
@@ -429,7 +431,7 @@ l_begin_switch:
       }
       break;
     case 'v':
-      if (strnequal(ps, "var")) {
+      if (whole_string_nequal(ps, "var")) {
         InitToken(TokenType::VAR);
         Step(3);
       } else {
@@ -437,7 +439,7 @@ l_begin_switch:
       }
       break;
     case 'w':
-      if (strnequal(ps, "while")) {
+      if (whole_string_nequal(ps, "while")) {
         InitToken(TokenType::WHILE);
         Step(5);
       } else {
@@ -446,7 +448,7 @@ l_begin_switch:
       break;
 
     case 'n':
-      if (strnequal(ps, "null")) {
+      if (whole_string_nequal(ps, "null")) {
         InitToken(TokenType::KVAL);
         t.v = Factory::NullValue();
         Step(4);
@@ -455,7 +457,7 @@ l_begin_switch:
       }
       break;
     case 'p':
-      if (strnequal(ps, "params")) {
+      if (whole_string_nequal(ps, "params")) {
         InitToken(TokenType::PARAMS);
         Step(6);
       } else {
@@ -640,7 +642,8 @@ void CodeGenerator::VisitFuncDecl(FuncDecl *p) {
   FunctionCtx *upper = ctx;
   ctx = fc;
   Visit(p->body);
-  if (ctx->cmd.size() == 0 || ctx->cmd.back() != (uint8_t)Opcode::RET) {
+  if (ctx->cmd.size() == 0 || (ctx->cmd.back() != (uint8_t)Opcode::RET &&
+                               ctx->cmd.back() != (uint8_t)Opcode::RETNULL )) {
     AppendOp(Opcode::RETNULL);
   }
   ctx = upper;

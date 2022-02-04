@@ -136,9 +136,11 @@ class VisualizerVisitor : public ASTVisitor {
   virtual void VisitReturnStat(ReturnStat *node) {
     DefNode("return");
     int return_ = ret;
-    Visit(node->expr);
-    int expr = ret;
-    Connect(return_, expr);
+    if (node->expr != nullptr) {
+      Visit(node->expr);
+      int expr = ret;
+      Connect(return_, expr);
+    }
     ret = return_;
   }
   virtual void VisitBreakStat(BreakStat *node) { DefNode("break"); }

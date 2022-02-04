@@ -763,6 +763,9 @@ class Parser {
     }
     p->body = ParseBlock();
     CHECK_OK(p->body);
+    if (p->body->stat.back()->type != AstNodeType::ReturnStat) {
+      p->body->stat.push(AllocReturnStat(ALLOC_PARAM));
+    }
     return p;
   }
 

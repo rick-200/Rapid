@@ -1,20 +1,50 @@
 var console = import("console");
-var arr=[];
 
-func get_print_x(x){
-    func print_x(){
-        console.print(x);
+func for_each(arr,f){
+    for(var i=0;i<arr.length;i+=1)
+        f(arr[i]);
+}
+
+func map(arr,f){
+    var new_arr=[];
+    func iter(x){
+        new_arr.push(f(x));
     }
-    return print_x;
+    for_each(arr,iter);
+    return new_arr;
 }
 
-for(var i=0;i<3;i+=1){
-  arr.push(get_print_x(i));
+func sum(arr){
+    var res=0;
+    func get_sum(x){
+        res+=x;
+    }
+    for_each(arr,get_sum);
+    return res;
 }
 
-arr[0]();
-arr[1]();
-arr[2]();
+
+var arr=[0,1,2,3,4,5,6,7,8,9];
+
+console.print(arr);
+
+func add(x,y){
+    return x+y;
+}
+
+func place_right(f,b){
+    func invoke(a){
+        return f(a,b);
+    }
+    return invoke;
+}
+
+var add10=place_right(add,10);
+
+
+console.print(map(arr,add10));
+console.print(sum(arr));
+
 
 
 /*
