@@ -1,5 +1,6 @@
 #include "ast.h"
 
+#include "allocation.h"
 #include "global.h"
 namespace rapid {
 namespace internal {
@@ -19,7 +20,7 @@ class CMZImpl : public CompilingMemoryZone {
 
  public:
   static CMZImpl* Create() {
-    CMZImpl* p = (CMZImpl*)malloc(sizeof(CMZImpl));
+    CMZImpl* p = Allocate<CMZImpl>();
     ASSERT(p);
     p->m_top = nullptr;
     p->m_usage = 0;
@@ -28,7 +29,7 @@ class CMZImpl : public CompilingMemoryZone {
   void PrepareAlloc() {
     ASSERT(m_top == nullptr);
     m_usage = 0;
-    m_top = (ZonePage*)malloc(sizeof(ZonePage));
+    m_top = Allocate<ZonePage>();
     ASSERT(m_top);
     m_top->prev = nullptr;
     m_top->size = m_top->used = 0;
@@ -43,7 +44,7 @@ class CMZImpl : public CompilingMemoryZone {
 
   void* Alloc(size_t size) {
     ASSERT(size != 0);
-    return malloc(size);  // for debug
+    //return malloc(size);  // for debug
     ASSERT(m_top);
     if (m_top->used + size <= m_top->size) {
       void* p = m_top->data + m_top->used;
@@ -54,7 +55,8 @@ class CMZImpl : public CompilingMemoryZone {
                             ? size  //则分配空间相等的ZonePage以避免内存浪费
                             : ZonePageSize;  //否则按ZonePageSize进行分配
     m_usage += alloc_size;
-    ZonePage* zp = (ZonePage*)malloc(sizeof(ZonePage) + alloc_size);
+    ZonePage* zp =
+        AllocateSize<ZonePage>(sizeof(ZonePage) + alloc_size);
     ASSERT(zp);
     zp->prev = m_top;
     zp->size = alloc_size;

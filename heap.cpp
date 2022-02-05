@@ -66,7 +66,7 @@ class HeapImpl /*public: Heap --
   }
 
   static HeapImpl *Create() {
-    HeapImpl *h = (HeapImpl *)malloc(sizeof(HeapImpl));
+    HeapImpl *h = Allocate<HeapImpl>();
     VERIFY(h != nullptr);
     h->m_color = 0;
     h->m_usage = 0;

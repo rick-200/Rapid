@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "global.h"
 #include "heap.h"
+#include "allocation.h"
 namespace rapid {
 namespace internal {
 
@@ -10,11 +11,10 @@ namespace internal {
 #define _this __hc_
 
 HandleContainer* HandleContainer::Create() {
-  HandleContainer* p =
-      (HandleContainer*)malloc(sizeof(HandleContainer));
+  HandleContainer* p = Allocate<HandleContainer>();
   VERIFY(p != nullptr);
   p->m_size = 0;
-  p->m_top = (LocalSlotBlock*)malloc(sizeof(LocalSlotBlock));
+  p->m_top = Allocate<LocalSlotBlock>();
   p->m_top->pre = nullptr;
   p->m_top->slot[p->m_size++] = nullptr;  // == OpenScope
   p->m_g_first = nullptr;
@@ -30,7 +30,7 @@ Object** HandleContainer::OpenLocalSlot(Object* val) {
   }
   G_HC;
   if (_this->m_size == 256) {
-    LocalSlotBlock* p = (LocalSlotBlock*)malloc(sizeof(LocalSlotBlock));
+    LocalSlotBlock* p = Allocate<LocalSlotBlock>();
     p->pre = _this->m_top;
     _this->m_top = p;
     _this->m_size = 0;
@@ -64,7 +64,7 @@ void HandleContainer::CloseLocalScope() {
 
 void HandleContainer::OpenGlobalSlot(Object* val, Object*** handle_ref) {
   G_HC;
-  GlobalSlot* gs = (GlobalSlot*)malloc(sizeof(GlobalSlot));
+  GlobalSlot* gs = Allocate<GlobalSlot>();
   gs->obj = val;
   gs->handle_ref = handle_ref;
   gs->nxt = gs->pre = nullptr;

@@ -228,7 +228,7 @@ class ExecuterImpl : public Executer {
     size_t old_size = m_stack.size;
     Object **oldp = m_stack.p;
     m_stack.size = new_size;
-    m_stack.p = (Object **)malloc(sizeof(Object *) * m_stack.size);
+    m_stack.p = Allocate<Slot>(m_stack.size);
     VERIFY(m_stack.p != nullptr);
     memcpy(m_stack.p, oldp, sizeof(Object *) * old_size);
     free(oldp);
@@ -736,8 +736,8 @@ class ExecuterImpl : public Executer {
 
  public:
   static ExecuterImpl *Create() {
-    ExecuterImpl *p = (ExecuterImpl *)malloc(sizeof(ExecuterImpl));
-    p->m_stack.p = (Slot *)malloc(sizeof(Slot) * Config::InitialStackSlotCount);
+    ExecuterImpl *p = Allocate<ExecuterImpl>();
+    p->m_stack.p = Allocate<Slot>(Config::InitialStackSlotCount);
     p->m_stack.size = Config::InitialStackSlotCount;
     new (&p->list_ci) List<CallInfo>();
     p->m_module = Factory::NewTable().ptr();

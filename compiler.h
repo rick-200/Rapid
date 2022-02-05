@@ -899,7 +899,7 @@ class CodeGenerator : public ASTVisitor {
  public:
   CodeGenerator() : ctx(nullptr), loop_ctx(nullptr), error_env(nullptr) {}
   Handle<FunctionData> Generate(FuncDecl *fd) {
-    error_env = (jmp_buf *)malloc(sizeof(jmp_buf));
+    error_env = Allocate<jmp_buf>();
     ASSERT(error_env != nullptr);
     if (setjmp(*error_env) != 0) {
       free(error_env);

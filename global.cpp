@@ -22,7 +22,7 @@ void Global::Init(GlobalData *data) {
     global_data = data;
     return;
   }
-  global_data = (GlobalData *)malloc(sizeof(GlobalData));
+  global_data = Allocate<GlobalData>();
   VERIFY(global_data != nullptr);
   global_data->ref_cnt = 1;
   global_data->heap = Heap::Create();
