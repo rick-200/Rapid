@@ -10,18 +10,18 @@ struct ZonePage {
   size_t used;
   uint8_t data[];
 };
-class CMZImpl : public CompilingMemoryZone {
-  static constexpr size_t ZonePageSize = 1024 * 4;
+class CMZImpl {
+  static constexpr size_t ZonePageSize = 1024 * 4 - sizeof(ZonePage);
 
  private:
   ZonePage* m_top;
   size_t m_usage;
+
   CMZImpl() = default;
 
  public:
   static CMZImpl* Create() {
     CMZImpl* p = Allocate<CMZImpl>();
-    ASSERT(p);
     p->m_top = nullptr;
     p->m_usage = 0;
     return p;
@@ -30,7 +30,6 @@ class CMZImpl : public CompilingMemoryZone {
     ASSERT(m_top == nullptr);
     m_usage = 0;
     m_top = Allocate<ZonePage>();
-    ASSERT(m_top);
     m_top->prev = nullptr;
     m_top->size = m_top->used = 0;
   }
@@ -44,7 +43,7 @@ class CMZImpl : public CompilingMemoryZone {
 
   void* Alloc(size_t size) {
     ASSERT(size != 0);
-    //return malloc(size);  // for debug
+    // return malloc(size);  // for debug
     ASSERT(m_top);
     if (m_top->used + size <= m_top->size) {
       void* p = m_top->data + m_top->used;
@@ -55,9 +54,7 @@ class CMZImpl : public CompilingMemoryZone {
                             ? size  //则分配空间相等的ZonePage以避免内存浪费
                             : ZonePageSize;  //否则按ZonePageSize进行分配
     m_usage += alloc_size;
-    ZonePage* zp =
-        AllocateSize<ZonePage>(sizeof(ZonePage) + alloc_size);
-    ASSERT(zp);
+    ZonePage* zp = AllocateSize<ZonePage>(sizeof(ZonePage) + alloc_size);
     zp->prev = m_top;
     zp->size = alloc_size;
     zp->used = size;
@@ -66,18 +63,20 @@ class CMZImpl : public CompilingMemoryZone {
   }
   size_t GetUsage() { return m_usage; }
 };
-CompilingMemoryZone* CompilingMemoryZone::Create() { return CMZImpl::Create(); }
+CompilingMemoryZone* CompilingMemoryZone::Create() {
+  return reinterpret_cast<CompilingMemoryZone*>(CMZImpl::Create());
+}
 void CompilingMemoryZone::PrepareAlloc() {
-  return ((CMZImpl*)Global::GetCMZ())->PrepareAlloc();
+  return reinterpret_cast<CMZImpl*>(Global::GetCMZ())->PrepareAlloc();
 }
 void CompilingMemoryZone::FreeAll() {
-  return ((CMZImpl*)Global::GetCMZ())->FreeAll();
+  return reinterpret_cast<CMZImpl*>(Global::GetCMZ())->FreeAll();
 }
 size_t CompilingMemoryZone::GetUsage() {
-  return ((CMZImpl*)Global::GetCMZ())->GetUsage();
+  return reinterpret_cast<CMZImpl*>(Global::GetCMZ())->GetUsage();
 }
 void* CompilingMemoryZone::Alloc(size_t size) {
-  return ((CMZImpl*)Global::GetCMZ())->Alloc(size);
+  return reinterpret_cast<CMZImpl*>(Global::GetCMZ())->Alloc(size);
 }
 }  // namespace internal
 }  // namespace rapid
