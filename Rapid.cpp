@@ -111,7 +111,9 @@ void test_compile(Handle<String> code) {
   }
 
   f = fopen(TEST_DIRECTORY "btc.txt", "w");
-  fprintf(f, "%s", VisualizeByteCode(Handle<SharedFunctionData>(fd->shared_data))->cstr());
+  fprintf(
+      f, "%s",
+      VisualizeByteCode(Handle<SharedFunctionData>(fd->shared_data))->cstr());
   fclose(f);
   Executer::RegisterModule(Factory::NewString("console"),
                            stdmodule::GetConsoleModule());
@@ -121,31 +123,31 @@ void test_compile(Handle<String> code) {
       std::chrono::high_resolution_clock::now();
   Handle<Object> ret = Executer::CallFunction(fd, param);
   std::chrono::nanoseconds tt = std::chrono::high_resolution_clock::now() - t;
-  printf("%lldus.\n", tt.count() / 1000);
+  printf("%fms.\n", tt.count() / 1000000.0);
 }
 
-//void test_alloc() {
+// void test_alloc() {
 //  int x = 0;
 //
 //  std::chrono::high_resolution_clock::time_point t =
 //      std::chrono::high_resolution_clock::now();
 //  for (int i = 0; i < 100000000; i++) x ^= i;
-//  std::chrono::nanoseconds tt1 = std::chrono::high_resolution_clock::now() - t;
-//  t = std::chrono::high_resolution_clock::now();
-//  for (int i = 0; i < 100000000; i++) {
+//  std::chrono::nanoseconds tt1 = std::chrono::high_resolution_clock::now() -
+//  t; t = std::chrono::high_resolution_clock::now(); for (int i = 0; i <
+//  100000000; i++) {
 //    void* p = malloc(sizeof(FunctionData));
 //    free(p);
 //    x ^= i;
 //  }
-//  std::chrono::nanoseconds tt2 = std::chrono::high_resolution_clock::now() - t;
-//  printf("%d\n", x);
-//  printf("%llums.\n%llums.\n", tt1.count() / 1000 / 1000,
+//  std::chrono::nanoseconds tt2 = std::chrono::high_resolution_clock::now() -
+//  t; printf("%d\n", x); printf("%llums.\n%llums.\n", tt1.count() / 1000 /
+//  1000,
 //         tt2.count() / 1000 / 1000);
 //}
 
 int main() {
-  //test_alloc();
-  //return 0;
+  // test_alloc();
+  // return 0;
   freopen(TEST_DIRECTORY "log.txt", "w", stderr);
   FILE* f = fopen(TEST_DIRECTORY "test.ra", "r");
   size_t siz = fread(buff, 1, 1024 * 1024 * 128, f);

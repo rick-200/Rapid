@@ -1,4 +1,13 @@
 var console = import("console");
+func f(){}
+var x = 0;
+for range(var i:100000000){
+    f();
+}
+console.print(x);
+
+/*
+var console = import("console");
 
 func for_each(arr,f){
     for(var i=0;i<arr.length;i+=1)
@@ -44,7 +53,7 @@ var add10=place_right(add,10);
 
 console.print(map(arr,add10));
 console.print(sum(arr));
-
+*/
 
 /*
 push i

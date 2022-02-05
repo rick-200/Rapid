@@ -42,6 +42,7 @@ class ZoneList {
   ~ZoneList() = default;
   T *begin() const { return m_p; }
   T *end() const { return m_p + m_siz; }
+  bool empty() { return m_siz == 0; }
   size_t size() const { return m_siz; }
   size_t capacity() const { return m_cap; }
   T &operator[](size_t pos) { return m_p[pos]; }
