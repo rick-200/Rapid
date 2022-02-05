@@ -44,7 +44,7 @@ void TokenStream::Step(int step) {
   for (int i = 0; i < step; i++) {
     if (*ps == '\n') {
       ++row;
-      col = 0;
+      col = 1;
     } else {
       ++col;
     }
@@ -504,7 +504,7 @@ l_begin_switch:
 }
 
 TokenStream::TokenStream(const char *s)
-    : ps(s), row(0), col(0), t({TokenType::END, 0, 0, Factory::NullValue()}) {
+    : ps(s), row(1), col(1), t({TokenType::END, 0, 0, Factory::NullValue()}) {
   ReadToken();
 }
 
@@ -513,6 +513,13 @@ Token &TokenStream::peek() { return t; }
 void TokenStream::consume() { ReadToken(); }
 
 //-----------------------------------------------------------------------
+
+void CodeGenerator::Visit(AstNode *node) {
+  size_t line_save = current_line;
+  current_line = node->row;
+  ASTVisitor::Visit(node);
+  current_line = line_save;
+}
 
 void CodeGenerator::VisitWithScope(AstNode *node) {
   EnterScope();

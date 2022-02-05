@@ -892,12 +892,13 @@ class SharedFunctionData : public Struct {
   FixedArray *inner_func;
   FixedArray *vars;
   FixedArray *extvars;
+  FixedArray *bytecode_line;
   size_t max_stack;
   size_t param_cnt;
 
  private:
   DECL_TRACEREF(SharedFunctionData, _M(name), _M(instructions), _M(kpool),
-                _M(inner_func), _M(vars), _M(extvars));
+                _M(inner_func), _M(vars), _M(extvars), _M(bytecode_line));
 
  public:
   OBJECT_DEF(SharedFunctionData)

@@ -70,7 +70,7 @@ class VisualizerVisitor : public ASTVisitor {
     }
     ret = if_;
   }
-  virtual void VisitLoopStat(LoopStat *node) { 
+  virtual void VisitLoopStat(LoopStat *node) {
     if (node->loop_type == LoopStat::Type::FOR) {
       DefNode("for");
     } else if (node->loop_type == LoopStat::Type::WHILE) {
@@ -309,9 +309,14 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
   sb.AppendFormat("  instructions(%llu bytes):\n", sfd->instructions->length());
   uint8_t *pc = sfd->instructions->begin();
   char buff[64];
+  int cmd_cnt = 0;
   while (pc - sfd->instructions->begin() < sfd->instructions->length()) {
     intptr_t siz = read_bytecode(pc, buff);
-    sb.AppendFormat("    %03d: %s\n", pc - sfd->instructions->begin(), buff);
+    sb.AppendFormat("    %-4lld | %-4d: %s\n",
+                    Integer::cast(sfd->bytecode_line->get(cmd_cnt))->value(),
+                    pc - sfd->instructions->begin(),
+                    buff);
+    cmd_cnt++;
     pc += siz;
     // sb.AppendString("\n");
   }

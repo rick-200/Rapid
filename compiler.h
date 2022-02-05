@@ -439,7 +439,7 @@ class Parser {
     REQUIRE(TokenType::SEMI);
     return p;
   }
-  LoopStat *ParseWhile() { 
+  LoopStat *ParseWhile() {
     REQUIRE(TokenType::WHILE);
     LoopStat *p = AllocLoopStat(ALLOC_PARAM);
     p->loop_type = LoopStat::Type::WHILE;
@@ -549,7 +549,8 @@ class Parser {
     REQUIRE(TokenType::SEMI);
     return p;
   }
-  BlockStat *ParseBlock() {
+  BlockStat *ParseBlock(
+      bool add_return = false /*如果没有return，自动在最后添加*/) {
     BlockStat *p = AllocBlockStat(ALLOC_PARAM);
     REQUIRE(TokenType::BK_LL);
     while (TK.t != TokenType::BK_LR) {
@@ -560,6 +561,9 @@ class Parser {
       }
       CHECK_OK(s);
       p->stat.push(s);
+    }
+    if (add_return &&
+        (p->stat.empty() || p->stat.back()->type != AstNodeType::ReturnStat)) {
     }
     REQUIRE(TokenType::BK_LR);
     return p;
@@ -654,11 +658,8 @@ class Parser {
     } else {
       UNEXPECTED_IF(true);
     }
-    p->body = ParseBlock();
+    p->body = ParseBlock(true);
     CHECK_OK(p->body);
-    if (p->body->stat.empty()|| p->body->stat.back()->type != AstNodeType::ReturnStat) {
-      p->body->stat.push(AllocReturnStat(ALLOC_PARAM));
-    }
     return p;
   }
 
@@ -710,6 +711,7 @@ struct FunctionCtx {
   ZoneList<FunctionCtx *> inner_func;
   ZoneList<uint8_t> cmd;
   ZoneList<TryCatchCtx> try_catch;
+  ZoneList<uint32_t> bytecode_line;  //每条字节码对应的代码行
   size_t top;
   size_t max_stack;
   size_t param_cnt;
@@ -748,9 +750,11 @@ class CodeGenerator : public ASTVisitor {
   FunctionCtx *ctx;
   LoopCtx *loop_ctx;
   jmp_buf *error_env;  //注意visit内不应手动申请内存
+  int current_line;
 
  public:
-  CodeGenerator() : ctx(nullptr), loop_ctx(nullptr), error_env(nullptr) {}
+  CodeGenerator()
+      : ctx(nullptr), loop_ctx(nullptr), error_env(nullptr), current_line(0) {}
   Handle<FunctionData> Generate(FuncDecl *fd) {
     error_env = Allocate<jmp_buf>();
     ASSERT(error_env != nullptr);
@@ -812,6 +816,10 @@ class CodeGenerator : public ASTVisitor {
     for (size_t i = 0; i < ctx->inner_func.size(); i++) {
       sfd->inner_func->set(i, *Translate(ctx->inner_func[i]));
     }
+    sfd->bytecode_line = *Factory::NewFixedArray(ctx->bytecode_line.size());
+    for (size_t i = 0; i < ctx->bytecode_line.size(); i++) {
+      sfd->bytecode_line->set(i, Integer::FromInt64(ctx->bytecode_line[i]));
+    }
     return sfd;
   }
 
@@ -870,6 +878,7 @@ class CodeGenerator : public ASTVisitor {
   void AppendS32(int32_t v) { AppendU32(*(uint32_t *)&v); }
   void AppendOp(Opcode op) {
     AppendU8((uint8_t)op);
+    ctx->bytecode_line.push(current_line);
     // printf("append:%d %lld\n", op, ctx->top);
   }
   void push() {
@@ -1043,6 +1052,7 @@ class CodeGenerator : public ASTVisitor {
   }
 
  private:
+  virtual void Visit(AstNode *node) override;
   void VisitWithScope(AstNode *node);
   // 通过 ASTVisitor 继承
   virtual void VisitExpressionStat(ExpressionStat *node) override;

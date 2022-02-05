@@ -27,6 +27,18 @@
     </Expand>
   </Type>
 
+  <Type Name="rapid::internal::ZoneList&lt;*&gt;">
+    <DisplayString>{{size = {m_siz}}}</DisplayString>
+    <Expand>
+      <Item Name="[length]">m_siz</Item>
+      <Item Name="[capacity]">m_cap</Item>
+      <ArrayItems>
+        <Size>m_siz</Size>
+        <ValuePointer>m_p</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
   <Type Name="rapid::internal::Handle&lt;*&gt;">
     <DisplayString>{{{m_p,na}}}</DisplayString>
   </Type>

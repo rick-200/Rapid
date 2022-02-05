@@ -1,7 +1,7 @@
 var console = import("console");
 func f(){}
 var x = 0;
-for range(var i:100000000){
+for range(var i:10){
     f();
 }
 console.print(x);

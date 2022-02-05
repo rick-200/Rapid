@@ -237,7 +237,7 @@ ITER_ASTNODE(AllocNode_ITERATOR)
 class ASTVisitor {
  public:
   virtual ~ASTVisitor(){};
-  void Visit(AstNode *node) {
+  virtual void Visit(AstNode *node) {
 #define ASTVisitor_DISPATCH_VIS_ITER(T)                 \
   case AstNodeType::T:                                  \
     return this->Visit##T(reinterpret_cast<T *>(node)); \
