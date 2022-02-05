@@ -8,55 +8,15 @@
 #include "list.h"
 namespace rapid {
 namespace internal {
-
-//相对于整个栈最底部的偏移量
-enum class StackOffset : uintptr_t {};
-inline StackOffset AddOffset(StackOffset so, intptr_t offset) {
-  return static_cast<StackOffset>(static_cast<intptr_t>(so) + offset);
-}
-class ScriptStack {
-  Object **m_p;
-  size_t m_size;
-
- public:
-  ScriptStack() {
-    m_size = Config::InitialStackSlotCount;
-    m_p = (Object **)malloc(sizeof(Object *) * Config::InitialStackSlotCount);
-  }
-  Object **GetRawPtr(StackOffset so) {
-    return m_p + static_cast<uintptr_t>(so);
-  }
-  StackOffset GetOffset(Object **p) {
-    ASSERT(p >= m_p && p < m_p + m_size);
-    return static_cast<StackOffset>(p - m_p);
-  }
-  //在top的基础上保留至少need个slot
-  //注意：Reserve调用后，之前GetRawPtr返回值（可能）失效
-  void Reserve(StackOffset top, size_t need) {
-    size_t new_size = (size_t)(GetRawPtr(top) + need - m_p);
-    if (new_size <= m_size) return;
-    if (new_size <= (m_size << 1)) new_size = m_size << 1;
-    size_t old_size = m_size;
-    Object **oldp = m_p;
-    m_size = new_size;
-    m_p = (Object **)malloc(sizeof(Object *) * m_size);
-    VERIFY(m_p != nullptr);
-    memcpy(m_p, oldp, sizeof(Object *) * old_size);
-    free(oldp);
-  }
-};
-class Stack {
-  Object *m_data;
-  size_t size;
-};
+typedef Object *Slot;
 struct CallInfo {
   bool is_script_call;  //从脚本代码执行的调用
   FunctionData *fd;
   Object *this_object;
-  StackOffset base;  //栈底
-  StackOffset top;   // top指向栈顶元素（不是栈顶+1）
-                     //栈空间为[base,top]闭区间
-  byte *pc;          //当前字节码指针
+  Slot *base;  //栈底
+  Slot *top;   // top指向栈顶元素（不是栈顶+1）
+               //栈空间为[base,top]闭区间
+  byte *pc;    //当前字节码指针
 };
 
 Array *NewArray(size_t reserved) {
@@ -247,31 +207,59 @@ DEF_CMP_OP(NotEqual, !=);
 #define EXEC_UNOP(_name) top[0] = _name(top[0]);
 
 class ExecuterImpl : public Executer {
-  ScriptStack m_stack;
   List<CallInfo> list_ci;
   Table *m_module;
   Exception *err;
-  Object ***ptr_top;  //指向当前Execute栈上的top指针，用于在gc时确定边界
 #if (DEBUG_LOG_EXEC_INFO)
   FILE *dbg_f;
 #endif
+  struct {
+    Object **p;
+    size_t size;
+  } m_stack;
 
  private:
-  bool prepare_call(StackOffset top, size_t param_cnt, Object *this_obj,
-                    FunctionData *fd) {
-    if (fd->shared_data->param_cnt != param_cnt) {  //参数不匹配
-      return false;
+  Slot *reserve_stack(Slot *base, size_t need) {
+    size_t new_size = (size_t)(base + need - m_stack.p);
+    if (new_size <= m_stack.size) return base;
+    intptr_t ret_offset = base - m_stack.p;
+    //最少增加一倍
+    if (new_size <= (m_stack.size << 1)) new_size = m_stack.size << 1;
+    size_t old_size = m_stack.size;
+    Object **oldp = m_stack.p;
+    m_stack.size = new_size;
+    m_stack.p = (Object **)malloc(sizeof(Object *) * m_stack.size);
+    VERIFY(m_stack.p != nullptr);
+    memcpy(m_stack.p, oldp, sizeof(Object *) * old_size);
+    free(oldp);
+
+    //修正所有指向栈对象的指针
+    for (auto &ci : list_ci) {
+      if (!ci.is_script_call) continue;
+      ci.base = m_stack.p + (ci.base - oldp);
+      ci.top = m_stack.p + (ci.top - oldp);
+      ExternVar *pev = ci.fd->open_extvar_head;
+      for (ExternVar *p = ci.fd->open_extvar_head; p != nullptr;
+           p = p->un.next) {
+        ASSERT(p->is_open());
+        p->value_ref = p->value_ref + (p->value_ref - oldp);
+      }
     }
-    StackOffset new_base = AddOffset(top, 1);
-    m_stack.Reserve(new_base, fd->shared_data->max_stack);
+
+    return m_stack.p + ret_offset;
+  }
+  void prepare_call(Slot *new_base, size_t param_cnt, Object *this_obj,
+                    FunctionData *fd) {
+    ASSERT(fd->shared_data->param_cnt == param_cnt);  //参数必须匹配
+
+    new_base = reserve_stack(new_base, fd->shared_data->max_stack);
 
     CallInfo new_ci;
     new_ci.is_script_call = true;
     new_ci.fd = fd;
     new_ci.base = new_base;
-    new_ci.top =
-        AddOffset(new_base, fd->shared_data->param_cnt -
-                                1 /*top为栈顶位置，栈长(top-base+1)，应减去1*/);
+    new_ci.top = new_base + fd->shared_data->param_cnt -
+                 1; /*top为栈顶位置，栈长(top-base+1)，应减去1*/
     new_ci.pc = fd->shared_data->instructions->begin();
     new_ci.this_object = this_obj;
     list_ci.push(new_ci);
@@ -280,8 +268,6 @@ class ExecuterImpl : public Executer {
 
   void dbg_print_stack() {
     fprintf(dbg_f, "----------stack---------\n");
-    if (ptr_top != nullptr)
-      list_ci.back().top = m_stack.GetOffset(*ptr_top);  //写回
     for (const auto &ci : list_ci) {
       fprintf(dbg_f, "CallInfo: ");
       if (ci.is_script_call) {
@@ -290,10 +276,9 @@ class ExecuterImpl : public Executer {
       } else {
         fprintf(dbg_f, "NativeCall\n");
       }
-      for (size_t i = static_cast<size_t>(ci.base);
-           i <= static_cast<size_t>(ci.top); i++) {
-        fprintf(dbg_f, "  [%llu:%llu] ", i, i - static_cast<size_t>(ci.base));
-        debug_print(dbg_f, m_stack.GetRawPtr(static_cast<StackOffset>(i))[0]);
+      for (Slot *p = ci.base; p <= ci.top; p++) {
+        fprintf(dbg_f, "  [%llu:%llu] ", p - m_stack.p, p - ci.base);
+        debug_print(dbg_f, *p);
         fprintf(dbg_f, "\n");
       }
     }
@@ -340,21 +325,25 @@ class ExecuterImpl : public Executer {
   //执行最顶上的CallInfo，直到CallType为NativeCall
   void Execute() {
   l_begin:
+
+#if (DEBUG_LOG_EXEC_INFO)
+    dbg_print_stack();
+#endif
+
     CallInfo *ci = &list_ci.back();
     if (!ci->is_script_call) return;
-    byte *pc = ci->pc;
+    byte *&pc = ci->pc;  //指针的引用，以便修改时同步到CallInfo中
     // top指向栈顶元素（不是栈顶+1）
     // top还用于标识gc范围，应在每条指令结束后再调整top指针
-    Object **top = m_stack.GetRawPtr(ci->top);
-    ptr_top = &top;  //更新ptr_top，用于gc
-    Object **base = m_stack.GetRawPtr(ci->base);
+    Slot *&top = ci->top;  //指针的引用，以便修改时同步到CallInfo中
+    Slot *&base = ci->base;  //指针的引用，以便修改时同步到CallInfo中
     Object **kpool = ci->fd->shared_data->kpool->begin();
     Object **inner_func = ci->fd->shared_data->inner_func->begin();
     ExternVar **extern_var =
         reinterpret_cast<ExternVar **>(ci->fd->extvars->begin());
     while (true) {
 #if (DEBUG_LOG_EXEC_INFO)
-      char buff[32];
+      char buff[64];
       read_bytecode(pc, buff);
       fprintf(dbg_f, "---->exec: %s\n", buff);
       fflush(dbg_f);
@@ -556,10 +545,6 @@ class ExecuterImpl : public Executer {
           uint16_t cnt = *(uint16_t *)pc;
           pc += 2;
           ASSERT(ci == &list_ci.back());
-          ci->pc = pc;  //写回pc
-          // ci->base = m_stack.GetOffset(base);
-          ASSERT(ci->base == m_stack.GetOffset(base));  // base应不变
-
           Object *this_obj;
           Object *func;
           if (op == Opcode::CALL) {
@@ -574,8 +559,9 @@ class ExecuterImpl : public Executer {
             if (true) {
               Parameters param(this_obj, top - cnt + 1, cnt);
               //先不改变top，以免参数被gc回收
-              ci->top = m_stack.GetOffset(top);  //写回top
+
               Object *ret = this_obj->InvokeMemberFunc(name, param);
+
               top -= cnt + 1;
               top[0] = ret;
               break;
@@ -585,14 +571,10 @@ class ExecuterImpl : public Executer {
             }
           }
 
-          ci->top = m_stack.GetOffset(top);  //写回top
-
-          StackOffset off_base = m_stack.GetOffset(base);
-          StackOffset off_top = m_stack.GetOffset(top);
           if (top[0]->IsFunctionData()) {
             FunctionData *fd = FunctionData::cast(top[0]);
-            prepare_call(off_top, cnt, this_obj, fd);
-            goto l_to_begin;
+            prepare_call(top + 1, cnt, this_obj, fd);
+            goto l_begin;
           } else if (top[0]->IsNativeFunction()) {
             Parameters param(this_obj, top + 1, cnt);
             top[0] = NativeFunction::cast(top[0])->call(param);
@@ -604,16 +586,14 @@ class ExecuterImpl : public Executer {
         case Opcode::RET:
           close_all_extern_var(&ci->fd->open_extvar_head);
           list_ci.pop();
-          m_stack.GetRawPtr(list_ci.back().top)[0] =
-              top[0];  //返回值保存至上一层调用的栈顶
-          goto l_to_begin;
+          list_ci.back().top[0] = top[0];  //返回值保存至上一层调用的栈顶
+          goto l_begin;
           break;
         case Opcode::RETNULL:
           close_all_extern_var(&ci->fd->open_extvar_head);
           list_ci.pop();
-          m_stack.GetRawPtr(list_ci.back().top)[0] =
-              nullptr;  //返回值保存至上一层调用的栈顶
-          goto l_to_begin;
+          list_ci.back().top[0] = nullptr;  //返回值保存至上一层调用的栈顶
+          goto l_begin;
           break;
         case Opcode::CLOSURE: {
           FunctionData *fd = NewFunctionData(
@@ -705,18 +685,6 @@ class ExecuterImpl : public Executer {
       dbg_print_stack();
 #endif
     }
-    goto l_return;
-
-  l_exception:
-
-  l_to_begin:
-    ptr_top = nullptr;
-#if (DEBUG_LOG_EXEC_INFO)
-    dbg_print_stack();
-#endif
-    goto l_begin;
-  l_return:;
-    ptr_top = nullptr;
   }
 
   // void fill_param(const RawParameters &param, Object **p,
@@ -739,42 +707,38 @@ class ExecuterImpl : public Executer {
     if (fd->shared_data->param_cnt != param.count()) {
       VERIFY(0);  // TODO;
     }
-    StackOffset base;
+    Slot *base;
     if (list_ci.empty()) {
-      base = static_cast<StackOffset>(0);
+      base = m_stack.p;
     } else {
-      base = AddOffset(list_ci.back().top, 1);
+      base = list_ci.back().top + 1;
     }
-    m_stack.Reserve(base, fd->shared_data->max_stack + 1 /*返回值*/);
+    base = reserve_stack(base, fd->shared_data->max_stack + 1 /*返回值*/);
 
     CallInfo native_ci;
     native_ci.is_script_call = false;
     native_ci.base = base;
     native_ci.top = base;
-    m_stack.GetRawPtr(base)[0] = nullptr;
+    base[0] = nullptr;
     list_ci.push(native_ci);
 
+    ++base;
     prepare_call(base, param.count(), param.get_this(), fd);
-
-    base = AddOffset(base, 1);
-
-    Object **pbase = m_stack.GetRawPtr(base);
-    for (size_t i = 0; i < param.count(); i++) pbase[i] = param[i];
-
+    for (size_t i = 0; i < param.count(); i++) base[i] = param[i];
     Execute();
 
     ASSERT(!list_ci.back().is_script_call);
     ASSERT(list_ci.back().base == native_ci.base);
 
     list_ci.pop();
-    return *m_stack.GetRawPtr(native_ci.base);
+    return *native_ci.base;
   }
 
  public:
   static ExecuterImpl *Create() {
     ExecuterImpl *p = (ExecuterImpl *)malloc(sizeof(ExecuterImpl));
-    p->ptr_top = nullptr;
-    new (&p->m_stack) ScriptStack();
+    p->m_stack.p = (Slot *)malloc(sizeof(Slot) * Config::InitialStackSlotCount);
+    p->m_stack.size = Config::InitialStackSlotCount;
     new (&p->list_ci) List<CallInfo>();
     p->m_module = Factory::NewTable().ptr();
     p->err = nullptr;
@@ -791,17 +755,11 @@ class ExecuterImpl : public Executer {
   void TraceStack(GCTracer *gct) {
     gct->Trace(this->m_module);
     if (list_ci.empty()) return;
-    if (ptr_top != nullptr) {
-      ASSERT(list_ci.back().is_script_call);
-      // ASSERT(list_ci.back().top<=)
-      list_ci.back().top = m_stack.GetOffset(*ptr_top);  //写回
-    }
     for (const auto &ci : list_ci) {
       if (ci.is_script_call) gct->Trace(ci.fd);
     }
-    size_t top = static_cast<size_t>(list_ci.back().top);
-    for (size_t i = static_cast<size_t>(0); i <= top; i++) {
-      gct->Trace(*m_stack.GetRawPtr(static_cast<StackOffset>(i)));
+    for (Slot *p = m_stack.p; p < m_stack.p + m_stack.size; p++) {
+      gct->Trace(*p);
     }
   }
   // void CallRapidFunc(Handle<FunctionData> func, Handle<Object> *params,

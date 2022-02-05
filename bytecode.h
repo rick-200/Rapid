@@ -272,15 +272,15 @@ struct Token {
 };
 #define CASE_0(_t)            \
   case Opcode::_t:            \
-    sprintf_s(pbuf, 32, #_t); \
+    sprintf_s(pbuf, 64, #_t); \
     return 1;
 #define CASE_1param(_t, _pt1)                         \
   case Opcode::_t:                                    \
-    sprintf_s(pbuf, 32, #_t " %d", *(_pt1*)(pc + 1)); \
+    sprintf_s(pbuf, 64, #_t " %d", *(_pt1*)(pc + 1)); \
     return 1 + sizeof(_pt1);
 #define CASE_2param(_t, _pt1, _pt2)                     \
   case Opcode::_t:                                      \
-    sprintf_s(pbuf, 32, #_t " %d %d", *(_pt1*)(pc + 1), \
+    sprintf_s(pbuf, 64, #_t " %d %d", *(_pt1*)(pc + 1), \
               *(_pt2*)(pc + 1 + sizeof(_pt1)));         \
     return 1 + sizeof(_pt1) + sizeof(_pt2);
 #define CASE_u8(_t) CASE_1param(_t, uint8_t)

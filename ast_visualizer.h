@@ -308,7 +308,7 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
                   sfd->max_stack);
   sb.AppendFormat("  instructions(%llu bytes):\n", sfd->instructions->length());
   uint8_t *pc = sfd->instructions->begin();
-  char buff[32];
+  char buff[64];
   while (pc - sfd->instructions->begin() < sfd->instructions->length()) {
     intptr_t siz = read_bytecode(pc, buff);
     sb.AppendFormat("    %03d: %s\n", pc - sfd->instructions->begin(), buff);
