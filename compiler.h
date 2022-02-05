@@ -598,8 +598,48 @@ class Parser {
     CHECK_OK(p->body);
     return p;
   }
-  LoopStat *ParseFor() {  // TODO
+  ForRangeStat *ParseForRangeRest() {
+    ForRangeStat *p = AllocForRangeStat(ALLOC_PARAM);
+    REQUIRE(TokenType::BK_SL);
+    REQUIRE(TokenType::VAR);
+    NEED_CHECK(TokenType::SYMBOL);
+    p->loop_var_name = Handle<String>::cast(TK.v);
+    CONSUME;
+    REQUIRE(TokenType::COLON);
+    Expression *exp1 = ParseExpression();
+    CHECK_OK(exp1);
+    if (TK.t == TokenType::COMMA) {
+      CONSUME;
+      Expression *exp2 = ParseExpression();
+      CHECK_OK(exp2);
+      if (TK.t == TokenType::COMMA) {
+        CONSUME;
+        Expression *exp3 = ParseExpression();
+        CHECK_OK(exp3);
+        REQUIRE(TokenType::BK_SR);
+        p->begin = exp1;
+        p->end = exp2;
+        p->step = exp3;
+      } else {
+        REQUIRE(TokenType::BK_SR);
+        p->begin = exp1;
+        p->end = exp2;
+      }
+    } else {
+      REQUIRE(TokenType::BK_SR);
+      p->end = exp1;
+    }
+    p->body = TryParseStatement();
+    CHECK_OK(p->body);
+    return p;
+  }
+  Statement *ParseFor() {
     REQUIRE(TokenType::FOR);
+    if (TK.t == TokenType::SYMBOL &&
+        strcmp(Handle<String>::cast(TK.v)->cstr(), "range") == 0) {
+      CONSUME;
+      return ParseForRangeRest();
+    }
     LoopStat *p = AllocLoopStat(ALLOC_PARAM);
     p->loop_type = LoopStat::Type::FOR;
     REQUIRE(TokenType::BK_SL);
@@ -937,6 +977,20 @@ class CodeGenerator : public ASTVisitor {
     pop();
     return cp;
   }
+  void ForRangeBegin(Handle<String> loop_var_name) {
+    AppendOp(Opcode::FOR_RANGE_BEGIN);
+    AppendU16(FindVar(loop_var_name));
+    AppendS32(0);
+  }
+  void ForRangeEnd(Codepos beginpos) {
+    ASSERT((Opcode)ctx->cmd[(int)beginpos] == Opcode::FOR_RANGE_BEGIN);
+    Codepos cur = CurrentPos();
+    ASSERT(*((int32_t *)&ctx->cmd[(int)beginpos + 1 + 2]) == 0);
+    *((int32_t *)&ctx->cmd[(int)beginpos + 1 + 2]) =
+        (int32_t)cur - (int32_t)beginpos + 5;
+    AppendOp(Opcode::FOR_RANGE_END);
+    AppendS32((int)beginpos - (int)cur);
+  }
   void ApplyJump(Codepos from, Codepos to) {
     Opcode op = (Opcode)ctx->cmd[(int)from];
     int16_t *jp = (int16_t *)&ctx->cmd[(int)from + 1];
@@ -960,6 +1014,7 @@ class CodeGenerator : public ASTVisitor {
     ASSERT(v == *(uint32_t *)&ctx->cmd[ctx->cmd.size() - 4]);
   }
   void AppendS16(int16_t v) { AppendU16(*(uint16_t *)&v); }
+  void AppendS32(int32_t v) { AppendU32(*(uint32_t *)&v); }
   void AppendOp(Opcode op) {
     AppendU8((uint8_t)op);
     // printf("append:%d %lld\n", op, ctx->top);
@@ -1016,11 +1071,11 @@ class CodeGenerator : public ASTVisitor {
     Executer::ThrowException(e);
     longjmp(*error_env, 1);
   }
-  // AddVar后应立即将值push到栈上
+  // 应先将初值push到栈上，再AddVar
   void AddVar(Handle<String> name) {
     VarCtx vc;
     vc.name = name;
-    vc.slot_id = ctx->top;
+    vc.slot_id = ctx->top - 1;
     vc.is_externvar = false;
     ctx->var.push(vc);
     ctx->allvar.push(vc);
@@ -1161,6 +1216,7 @@ class CodeGenerator : public ASTVisitor {
   virtual void VisitImportExpr(ImportExpr *node) override;
   virtual void VisitArrayExpr(ArrayExpr *node) override;
   virtual void VisitTableExpr(TableExpr *node) override;
+  virtual void VisitForRangeStat(ForRangeStat *node) override;
 };
 
 }  // namespace internal

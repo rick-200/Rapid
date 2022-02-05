@@ -94,7 +94,8 @@ class ZoneList {
   V(AssignExpr)         \
   V(CallExpr)           \
   V(ThisExpr)           \
-  V(ParamsExpr) V(ImportExpr) V(ArrayExpr) V(TableExpr) V(TryCatchStat)
+  V(ParamsExpr)         \
+  V(ImportExpr) V(ArrayExpr) V(TableExpr) V(TryCatchStat) V(ForRangeStat)
 
 enum class AstNodeType {
 #define AstNodeType_ITER(t) t,
@@ -131,6 +132,11 @@ struct LoopStat : public Statement {
   Statement *init;
   ExpressionStat *after;
   Expression *cond;
+  Statement *body;
+};
+struct ForRangeStat : public Statement {
+  Handle<String> loop_var_name;
+  Expression *begin, *end, *step;
   Statement *body;
 };
 struct SingleVarDecl {

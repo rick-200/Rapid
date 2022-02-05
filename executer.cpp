@@ -38,6 +38,7 @@ class ScriptStack {
     if (new_size <= (m_size << 1)) new_size = m_size << 1;
     size_t old_size = m_size;
     Object **oldp = m_p;
+    m_size = new_size;
     m_p = (Object **)malloc(sizeof(Object *) * m_size);
     VERIFY(m_p != nullptr);
     memcpy(m_p, oldp, sizeof(Object *) * old_size);
@@ -665,6 +666,38 @@ class ExecuterImpl : public Executer {
         //  }
         //  break;
         //}
+        case Opcode::FOR_RANGE_BEGIN: {
+          uint64_t i = Integer::cast(base[*(uint16_t *)pc])->value();
+          uint64_t end = Integer::cast(base[*(uint16_t *)pc + 1])->value();
+          uint64_t step = Integer::cast(base[*(uint16_t *)pc + 2])->value();
+          if (step > 0) {
+            if (i >= end) {
+              pc = pc - 1 + *(int32_t *)(pc + 2);
+              break;
+            }
+          } else if (step < 0) {
+            if (i <= end) {
+              pc = pc - 1 + *(int32_t *)(pc + 2);
+              break;
+            }
+          } else {
+            VERIFY(0);
+          }
+          pc += 6;
+          break;
+        }
+        case Opcode::FOR_RANGE_END: {
+          // offset=<uint16_t> pc-1+*(int32_t *)pc+1 -- 循环变量的位置
+          uint16_t offset = *(uint16_t *)(pc + *(int32_t *)pc);
+          uint64_t i = Integer::cast(base[offset])->value();
+          uint64_t end = Integer::cast(base[offset + 1])->value();
+          uint64_t step = Integer::cast(base[offset + 2])->value();
+          base[offset] =
+              Integer::FromInt64(Integer::cast(base[offset])->value() +
+                                 Integer::cast(base[offset + 2])->value());
+          pc = pc - 1 + *(int32_t *)pc;
+          break;
+        }
         default:
           ASSERT(0);
       }

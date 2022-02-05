@@ -1,59 +1,50 @@
-fuction '#global'@0000028FB0288510, (14)slots:
-  instructions(124 bytes):
-    003: LOADK 0
-    004: IMPORT
-    007: CLOSURE 0
-    010: CLOSURE 1
-    013: CLOSURE 2
-    016: LOADK 1
-    019: LOADK 2
-    022: LOADK 3
-    025: LOADK 4
-    028: LOADK 5
-    031: LOADK 6
-    034: LOADK 7
-    037: LOADK 8
-    040: LOADK 9
-    043: LOADK 10
-    046: MAKE_ARRAY 10
-    049: LOADL 0
-    052: LOADK 11
-    055: LOADL 4
-    058: THIS_CALL 1
-    059: POP
-    062: CLOSURE 3
-    065: CLOSURE 4
-    068: LOADL 6
-    071: LOADL 5
-    074: LOADK 12
-    077: CALL 2
-    080: LOADL 0
-    083: LOADK 11
-    086: LOADL 2
-    089: LOADL 4
-    092: LOADL 7
-    095: CALL 2
-    098: THIS_CALL 1
-    099: POP
-    102: LOADL 0
-    105: LOADK 11
-    108: LOADL 3
-    111: LOADL 4
-    114: CALL 1
-    117: THIS_CALL 1
-    118: POP
-    121: CLOSE 1
-    123: POPN 8
-    124: RETNULL
-  locals(8):
+fuction '#global'@0000018D4EFB51F0, (13)slots:
+  instructions(102 bytes):
+    000: LOADK 0
+    003: IMPORT
+    004: CLOSURE 0
+    007: CLOSURE 1
+    010: LOADK 1
+    013: LOADK 2
+    016: LOADK 3
+    019: LOADK 4
+    022: LOADK 5
+    025: LOADK 6
+    028: LOADK 7
+    031: LOADK 8
+    034: LOADK 9
+    037: LOADK 10
+    040: MAKE_ARRAY 10
+    043: LOADL 0
+    046: LOADK 11
+    049: LOADL 3
+    052: THIS_CALL 1
+    055: POP
+    056: CLOSURE 2
+    059: CLOSURE 3
+    062: LOADL 5
+    065: LOADL 4
+    068: LOADK 12
+    071: CALL 2
+    074: LOADL 0
+    077: LOADK 11
+    080: LOADL 2
+    083: LOADL 3
+    086: LOADL 6
+    089: CALL 2
+    092: THIS_CALL 1
+    095: POP
+    096: CLOSE 1
+    099: POPN 7
+    101: RETNULL
+  locals(7):
     0 console:0
     1 for_each:1
     2 map:2
-    3 sum:3
-    4 arr:4
-    5 add:5
-    6 place_right:6
-    7 add10:7
+    3 arr:3
+    4 add:4
+    5 place_right:5
+    6 add10:6
   consts(13):
     0 'console'
     1 0
@@ -69,39 +60,35 @@ fuction '#global'@0000028FB0288510, (14)slots:
     11 'print'
     12 10
   extern vars(0):
-  inner func(5):
-    0 'for_each'@0000028FB02885B0
-    1 'map'@0000028FB028E8F0
-    2 'sum'@0000028FB028EA30
-    3 'add'@0000028FB028EB70
-    4 'place_right'@0000028FB028EC10
+  inner func(4):
+    0 'for_each'@0000018D4EFB6880
+    1 'map'@0000018D4EFB79C0
+    2 'add'@0000018D4EFB7B00
+    3 'place_right'@0000018D4EFB8BB0
 
-fuction 'for_each'@0000028FB02885B0, (6)slots:
-  instructions(46 bytes):
-    003: LOADK 0
-    006: LOADL 2
-    009: LOADL 0
-    012: LOADK 1
-    013: GET_P
-    014: LT
-    017: JMP_F 30
+fuction 'for_each'@0000018D4EFB6880, (8)slots:
+  instructions(42 bytes):
+    000: LOADK 0
+    003: LOADL 0
+    006: LOADK 1
+    009: GET_P
+    010: LOADK 2
+    013: FOR_RANGE_BEGIN 2 26
     020: LOADL 1
     023: LOADL 0
     026: LOADL 2
-    027: GET_I
+    029: GET_I
     030: CALL 1
-    031: POP
-    034: LOADL 2
-    037: LOADK 2
-    038: ADD
-    041: STOREL 2
-    044: JMP -38
-    045: POP
-    046: RETNULL
-  locals(3):
+    033: POP
+    034: FOR_RANGE_END -21
+    039: POPN 3
+    041: RETNULL
+  locals(5):
     0 arr:0
     1 f:1
     2 i:2
+    3 (range end):3
+    4 (range step):4
   consts(3):
     0 0
     1 'length'
@@ -109,17 +96,17 @@ fuction 'for_each'@0000028FB02885B0, (6)slots:
   extern vars(0):
   inner func(0):
 
-fuction 'map'@0000028FB028E8F0, (7)slots:
+fuction 'map'@0000018D4EFB79C0, (7)slots:
   instructions(21 bytes):
-    001: MAKE_ARRAY_0
-    004: CLOSURE 0
-    007: LOADE 0
-    010: LOADL 0
-    013: LOADL 3
-    016: CALL 2
-    017: POP
-    020: LOADL 2
-    021: RET
+    000: MAKE_ARRAY_0
+    001: CLOSURE 0
+    004: LOADE 0
+    007: LOADL 0
+    010: LOADL 3
+    013: CALL 2
+    016: POP
+    017: LOADL 2
+    020: RET
   locals(4):
     0 arr:0
     1 f:1
@@ -129,18 +116,18 @@ fuction 'map'@0000028FB028E8F0, (7)slots:
   extern vars(1):
     0 for_each:true:1
   inner func(1):
-    0 'iter'@0000028FB028E990
+    0 'iter'@0000018D4EFB7A60
 
-fuction 'iter'@0000028FB028E990, (5)slots:
+fuction 'iter'@0000018D4EFB7A60, (5)slots:
   instructions(20 bytes):
-    003: LOADE 0
-    006: LOADK 0
-    009: LOADE 1
-    012: LOADL 0
-    015: CALL 1
-    018: THIS_CALL 1
-    019: POP
-    020: RETNULL
+    000: LOADE 0
+    003: LOADK 0
+    006: LOADE 1
+    009: LOADL 0
+    012: CALL 1
+    015: THIS_CALL 1
+    018: POP
+    019: RETNULL
   locals(1):
     0 x:0
   consts(1):
@@ -150,48 +137,12 @@ fuction 'iter'@0000028FB028E990, (5)slots:
     1 f:true:1
   inner func(0):
 
-fuction 'sum'@0000028FB028EA30, (6)slots:
-  instructions(23 bytes):
-    003: LOADK 0
-    006: CLOSURE 0
-    009: LOADE 0
-    012: LOADL 0
-    015: LOADL 2
-    018: CALL 2
-    019: POP
-    022: LOADL 1
-    023: RET
-  locals(3):
-    0 arr:0
-    1 res:1
-    2 get_sum:2
-  consts(1):
-    0 0
-  extern vars(1):
-    0 for_each:true:1
-  inner func(1):
-    0 'get_sum'@0000028FB028EAD0
-
-fuction 'get_sum'@0000028FB028EAD0, (3)slots:
-  instructions(11 bytes):
-    003: LOADE 0
-    006: LOADL 0
-    007: ADD
-    010: STOREE 0
-    011: RETNULL
-  locals(1):
-    0 x:0
-  consts(0):
-  extern vars(1):
-    0 res:true:1
-  inner func(0):
-
-fuction 'add'@0000028FB028EB70, (4)slots:
+fuction 'add'@0000018D4EFB7B00, (4)slots:
   instructions(8 bytes):
-    003: LOADL 0
-    006: LOADL 1
-    007: ADD
-    008: RET
+    000: LOADL 0
+    003: LOADL 1
+    006: ADD
+    007: RET
   locals(2):
     0 x:0
     1 y:1
@@ -199,11 +150,11 @@ fuction 'add'@0000028FB028EB70, (4)slots:
   extern vars(0):
   inner func(0):
 
-fuction 'place_right'@0000028FB028EC10, (4)slots:
+fuction 'place_right'@0000018D4EFB8BB0, (4)slots:
   instructions(7 bytes):
-    003: CLOSURE 0
-    006: LOADL 2
-    007: RET
+    000: CLOSURE 0
+    003: LOADL 2
+    006: RET
   locals(3):
     0 f:0
     1 b:1
@@ -211,15 +162,15 @@ fuction 'place_right'@0000028FB028EC10, (4)slots:
   consts(0):
   extern vars(0):
   inner func(1):
-    0 'invoke'@0000028FB028F2A0
+    0 'invoke'@0000018D4EFB8C50
 
-fuction 'invoke'@0000028FB028F2A0, (4)slots:
+fuction 'invoke'@0000018D4EFB8C50, (4)slots:
   instructions(13 bytes):
-    003: LOADE 0
-    006: LOADL 0
-    009: LOADE 1
-    012: CALL 2
-    013: RET
+    000: LOADE 0
+    003: LOADL 0
+    006: LOADE 1
+    009: CALL 2
+    012: RET
   locals(1):
     0 a:0
   consts(0):

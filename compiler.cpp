@@ -611,7 +611,6 @@ void CodeGenerator::VisitLoopStat(LoopStat *p) {
 
 void CodeGenerator::VisitVarDecl(VarDecl *p) {
   for (auto decl : p->decl) {
-    AddVar(decl.name);
     if (decl.init) {
       Visit(decl.init);
       // AppendOp(Opcode::PUSH); -- 不需要
@@ -619,6 +618,7 @@ void CodeGenerator::VisitVarDecl(VarDecl *p) {
       AppendOp(Opcode::PUSH_NULL);
       push();
     }
+    AddVar(decl.name);
   }
 }
 
@@ -629,7 +629,6 @@ void CodeGenerator::VisitFuncDecl(FuncDecl *p) {
   fc->outer_func = ctx;
   fc->param_cnt = p->param.size();
   fc->top = fc->max_stack = p->param.size();
-  AddVar(p->name);
   for (size_t i = 0; i < p->param.size(); i++) {
     VarCtx vc;
     vc.name = p->param[i];
@@ -648,6 +647,7 @@ void CodeGenerator::VisitFuncDecl(FuncDecl *p) {
   }
   ctx = upper;
   Closure(fdp);
+  AddVar(p->name);
   // TODO：整理trycatch块，把catch代码都放到函数末尾
 }
 
@@ -986,6 +986,52 @@ void CodeGenerator::VisitTableExpr(TableExpr *p) {
     AppendOp(Opcode::MAKE_TABLE);
     AppendU16((uint16_t)p->params.size());
     pop(p->params.size() * 2 - 1);
+  }
+}
+/*
+生成for range的代码
+
+for range(var name:end)
+for range(var name:begin,end)
+for range(var name:begin,end,step)
+
+*/
+void CodeGenerator::VisitForRangeStat(ForRangeStat *p) {
+  LoopCtx *upper = loop_ctx;
+  LoopCtx *current = AllocLoopCtx();
+  loop_ctx = current;
+
+  EnterScope();
+  if (p->begin != nullptr) {
+    Visit(p->begin);
+  } else {
+    LoadK(Factory::NewInteger(0));
+  }
+  AddVar(p->loop_var_name);//i=begin
+  ASSERT(p->end != nullptr);
+  Visit(p->end);
+  AddVar(Factory::NewString("(range end)"));
+  if (p->step != nullptr) {
+    Visit(p->step);
+  } else {
+    LoadK(Factory::NewInteger(1));
+  }
+  AddVar(Factory::NewString("(range step)"));
+  Codepos for_range_begin = CurrentPos();
+  ForRangeBegin(p->loop_var_name);
+  Visit(p->body);
+  Codepos for_range_end = CurrentPos();
+  ForRangeEnd(for_range_begin);
+  Codepos for_range_after_end = CurrentPos();
+  LeaveScope();
+
+
+  loop_ctx = upper;  //恢复
+  for (auto pos : current->break_pos) {
+    ApplyJump(pos, for_range_after_end);
+  }
+  for (auto pos : current->continue_pos) {
+    ApplyJump(pos, for_range_end);
   }
 }
 

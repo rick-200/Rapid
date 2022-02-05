@@ -30,12 +30,12 @@ enum class Opcode : uint8_t {
   POP,
   POPN,  // pop n个，u8
 
-  CLOSE, //u16 关闭一个externvar
+  CLOSE,  // u16 关闭一个externvar
 
-  MAKE_ARRAY,    // u16
+  MAKE_ARRAY,    // u16[元素个数]
   MAKE_ARRAY_0,  // 0
 
-  MAKE_TABLE,    // u16
+  MAKE_TABLE,    // u16[键值对的个数]
   MAKE_TABLE_0,  // 0
 
   ADD,
@@ -81,7 +81,11 @@ enum class Opcode : uint8_t {
   RET,
   RETNULL,
   CLOSURE,
-  //CLOSURE_SELF,
+  // CLOSURE_SELF,
+
+  FOR_RANGE_BEGIN,  // u16[循环变量] s32[跳转位置-FOR_RANGE_END的下一条指令] ---
+                    // 循环变量后总是紧跟两个匿名变量end和step
+  FOR_RANGE_END,  // s32[跳转位置-FOR_RANGE_BEGIN]
 
   PLACE_HOLDER,
 
@@ -123,7 +127,7 @@ enum class TokenType {
   COMMA,
   DOT,
   SEMI,
-  COLON,
+  COLON,  //:
 
   ADD,  //既代表二元加法，又代表一元‘正’
   SUB,  //既代表二元减法，又代表一元‘负’
@@ -162,6 +166,7 @@ enum class TokenType {
   GE,
   NEQ,
   EQ,
+
   __SIZE,
 };
 #define TT_ITER_KEWWORD(V)           \
@@ -269,18 +274,20 @@ struct Token {
   case Opcode::_t:            \
     sprintf_s(pbuf, 32, #_t); \
     return 1;
-#define CASE_u8(_t)                                      \
-  case Opcode::_t:                                       \
-    sprintf_s(pbuf, 32, #_t " %d", *(uint8_t*)(pc + 1)); \
-    return 2;
-#define CASE_u16(_t)                                      \
-  case Opcode::_t:                                        \
-    sprintf_s(pbuf, 32, #_t " %d", *(uint16_t*)(pc + 1)); \
-    return 3;
-#define CASE_s16(_t)                                     \
-  case Opcode::_t:                                       \
-    sprintf_s(pbuf, 32, #_t " %d", *(int16_t*)(pc + 1)); \
-    return 3;
+#define CASE_1param(_t, _pt1)                         \
+  case Opcode::_t:                                    \
+    sprintf_s(pbuf, 32, #_t " %d", *(_pt1*)(pc + 1)); \
+    return 1 + sizeof(_pt1);
+#define CASE_2param(_t, _pt1, _pt2)                     \
+  case Opcode::_t:                                      \
+    sprintf_s(pbuf, 32, #_t " %d %d", *(_pt1*)(pc + 1), \
+              *(_pt2*)(pc + 1 + sizeof(_pt1)));         \
+    return 1 + sizeof(_pt1) + sizeof(_pt2);
+#define CASE_u8(_t) CASE_1param(_t, uint8_t)
+#define CASE_u16(_t) CASE_1param(_t, uint16_t)
+#define CASE_s16(_t) CASE_1param(_t, int16_t)
+#define CASE_s32(_t) CASE_1param(_t, int32_t)
+#define CASE_u16_s32(_t) CASE_2param(_t, uint16_t, int32_t)
 
 inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
   switch ((Opcode)*pc) {
@@ -337,7 +344,9 @@ inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
     CASE_s16(JMP_T);
     CASE_s16(JMP_F);
     CASE_u16(CLOSURE);
-    //CASE_0(CLOSURE_SELF);
+    CASE_u16_s32(FOR_RANGE_BEGIN);
+    CASE_s32(FOR_RANGE_END);
+      // CASE_0(CLOSURE_SELF);
 
     default:
       ASSERT(0);

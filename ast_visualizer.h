@@ -265,6 +265,34 @@ class VisualizerVisitor : public ASTVisitor {
     }
     ret = mk_t;
   }
+  virtual void VisitForRangeStat(ForRangeStat *p) {
+    DefNode("for range");
+    int for_range = ret;
+    if (p->begin) {
+      Visit(p->begin);
+      int begin = ret;
+      DefNode("begin:");
+      Connect(ret, begin);
+      Connect(for_range, ret);
+    }
+    if (p->end) {
+      Visit(p->end);
+      int end = ret;
+      DefNode("end:");
+      Connect(ret, end);
+      Connect(for_range, ret);
+    }
+    if (p->step) {
+      Visit(p->step);
+      int step = ret;
+      DefNode("step:");
+      Connect(ret, step);
+      Connect(for_range, ret);
+    }
+    Visit(p->body);
+    Connect(for_range, ret);
+    ret = for_range;
+  }
 };
 
 inline Handle<String> VisualizeAST(AstNode *node) {
@@ -282,8 +310,9 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
   uint8_t *pc = sfd->instructions->begin();
   char buff[32];
   while (pc - sfd->instructions->begin() < sfd->instructions->length()) {
-    pc += read_bytecode(pc, buff);
+    intptr_t siz = read_bytecode(pc, buff);
     sb.AppendFormat("    %03d: %s\n", pc - sfd->instructions->begin(), buff);
+    pc += siz;
     // sb.AppendString("\n");
   }
   sb.AppendFormat("  locals(%llu):\n", sfd->vars->length());

@@ -1,7 +1,7 @@
 var console = import("console");
 
 func for_each(arr,f){
-    for(var i=0;i<arr.length;i+=1)
+    for range(var i:arr.length)
         f(arr[i]);
 }
 
@@ -14,14 +14,6 @@ func map(arr,f){
     return new_arr;
 }
 
-func sum(arr){
-    var res=0;
-    func get_sum(x){
-        res+=x;
-    }
-    for_each(arr,get_sum);
-    return res;
-}
 
 
 var arr=[0,1,2,3,4,5,6,7,8,9];
@@ -43,11 +35,25 @@ var add10=place_right(add,10);
 
 
 console.print(map(arr,add10));
-console.print(sum(arr));
-
 
 
 /*
+push i
+i=begin
+push end
+push step
+for_range_start i l_end
+for_range_end i l_start
+
+for range(i:0,arr.length,1){
+    
+}
+for range(i:arr.length){
+    
+}
+for each(v:arr){
+
+}
 var a=1,b=0.1;
 try{
     a = a & b;
