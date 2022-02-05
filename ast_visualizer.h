@@ -70,7 +70,7 @@ class VisualizerVisitor : public ASTVisitor {
     }
     ret = if_;
   }
-  virtual void VisitLoopStat(LoopStat *node) {  // TODO
+  virtual void VisitLoopStat(LoopStat *node) { 
     if (node->loop_type == LoopStat::Type::FOR) {
       DefNode("for");
     } else if (node->loop_type == LoopStat::Type::WHILE) {

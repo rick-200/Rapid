@@ -2,18 +2,6 @@
 namespace rapid {
 namespace internal {
 
-// constexpr bool __char_equal(const char* s1, const char* s2, size_t p) {
-//  return s1[p] == s2[p];
-//}
-// template <size_t... Idx>
-// constexpr bool __strnequal_impl(const char* s1, const char* s2,
-//                                std::index_sequence<Idx...>&&) {
-//  return (... && __char_equal(s1, s2, Idx));
-//}
-// template <size_t LEN>
-// constexpr bool whole_string_nequal(const char* ps, const char (&pkw)[LEN]) {
-//  return __strnequal_impl(ps, pkw, std::make_index_sequence<LEN - 1>{});
-//}
 
 struct __char_check_t {
   static constexpr uint8_t Alphabet = 1;
@@ -104,7 +92,7 @@ void TokenStream::ReadTokenString() {
         goto l_endstr;
       case '\r':
       case '\n':
-        VERIFY(0);  // TODO
+        VERIFY(0);  // TODO：抛出错误，string不能跨行
         break;
       case '\\': {
         Step();
@@ -145,11 +133,11 @@ void TokenStream::ReadTokenString() {
               Step(2);
               goto l_beginstr;
             }
-            VERIFY(0);
+            VERIFY(0);// TODO：抛出错误，string中的非法字符
             break;
           }
           default:
-            VERIFY(0);
+            VERIFY(0);// TODO：抛出错误，string中无法识别的转义字符
         }
         break;
       }
@@ -510,7 +498,7 @@ l_begin_switch:
       ReadTokenSymbol();
       break;
     default:
-      ASSERT(0);
+      VERIFY(0);//TODO: 抛出错误，非法字符
       break;
   }
 }
@@ -843,7 +831,7 @@ void CodeGenerator::VisitAssignExpr(AssignExpr *p) {
 }
 
 void CodeGenerator::VisitCallExpr(CallExpr *p) {
-  if (p->callee->type == AstNodeType::ImportExpr) {  // TODO
+  if (p->callee->type == AstNodeType::ImportExpr) {  
     if (p->params.size() != 1) {
       error_illegal_use(p->row, p->col, "import");
     }

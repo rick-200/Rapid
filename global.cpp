@@ -36,7 +36,7 @@ void Global::Init(GlobalData *data) {
 void Global::Close() {
   ASSERT(global_data != nullptr);
   if (--global_data->ref_cnt == 0) {
-    // TODO
+    // TODO£∫ µœ÷Global::Close
   }
 }
 

@@ -79,7 +79,7 @@ inline Object *Add(Object *a, Object *b) {
     }
   }
   if (a->IsString() && b->IsString()) {
-    // TODO:
+    // TODO: String的加法
     VERIFY(0);
   }
   return Float::NaN();
@@ -687,21 +687,6 @@ class ExecuterImpl : public Executer {
     }
   }
 
-  // void fill_param(const RawParameters &param, Object **p,
-  //                SharedFunctionData *sfd) {
-  //  if (param.count() <= sfd->param_cnt) {
-  //    for (size_t i = 0; i < param.count(); i++) {
-  //      p[i] = param.get(i);
-  //    }
-  //    Object *null_v = Heap::NullValue();
-  //    for (size_t i = param.count(); i < sfd->param_cnt; i++) {
-  //      p[i] = null_v;
-  //    }
-  //  } else {
-  //    // TODO:extvar
-  //    VERIFY(0);
-  //  }
-  //}
 
   Object *CallFunction(FunctionData *fd, const RawParameters &param) {
     if (fd->shared_data->param_cnt != param.count()) {
@@ -748,7 +733,7 @@ class ExecuterImpl : public Executer {
     return p;
   }
   static void Destory(Executer *p) {
-    // TODO;
+    // TODO：实现ExecuterImpl::Destory
   }
 
  public:

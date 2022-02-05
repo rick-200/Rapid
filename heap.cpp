@@ -115,7 +115,7 @@ class HeapImpl /*public: Heap --
   }
 
   static void Destory(Heap *heap) {
-    // TODO
+    // TODO: µœ÷HeapImpl::Destory
   }
 
 #define ALLOC_HEAPOBJECT(_p, _t)                    \
