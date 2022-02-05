@@ -743,7 +743,7 @@ class ExecuterImpl : public Executer {
     p->m_module = Factory::NewTable().ptr();
     p->err = nullptr;
 #if (DEBUG_LOG_EXEC_INFO)
-    p->dbg_f = fopen("./exec_log.txt", "w");
+    p->dbg_f = fopen(DEBUG_LOG_DIRECTORY "exec_log.txt", "w");
 #endif  // _DEBUG
     return p;
   }
