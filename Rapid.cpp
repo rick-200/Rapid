@@ -14,6 +14,9 @@
 #include "object.h"
 using namespace rapid;
 using namespace internal;
+
+#define TEST_DIRECTORY "E:/Script/Rapid/test/"
+
 void print_object(Object* obj) {
   if (obj->IsNull())
     printf("null");
@@ -79,7 +82,7 @@ void test_parse(Handle<String> code) {
   printf("%.2fKiB.\n", CompilingMemoryZone::GetUsage() / 1024.0);
   return;
   Handle<String> vs = VisualizeAST(ast);
-  FILE* f = fopen("graph.md", "w");
+  FILE* f = fopen(TEST_DIRECTORY "graph.md", "w");
   fprintf(f, "```mermaid\ngraph LR\n");
   fprintf(f, "%s", vs->cstr());
   fprintf(f, "```\n");
@@ -93,7 +96,7 @@ void test_compile(Handle<String> code) {
     fflush(stdout);
     exit(0);
   }
-  FILE* f = fopen("graph.md", "w");
+  FILE* f = fopen(TEST_DIRECTORY "graph.md", "w");
   fprintf(f, "```mermaid\ngraph LR\n");
   fprintf(f, "%s", VisualizeAST(ast)->cstr());
   fprintf(f, "```\n");
@@ -107,7 +110,7 @@ void test_compile(Handle<String> code) {
     exit(0);
   }
 
-  f = fopen("btc.txt", "w");
+  f = fopen(TEST_DIRECTORY "btc.txt", "w");
   fprintf(f, "%s", VisualizeByteCode(Handle<SharedFunctionData>(fd->shared_data))->cstr());
   fclose(f);
   Executer::RegisterModule(Factory::NewString("console"),
@@ -143,8 +146,8 @@ void test_compile(Handle<String> code) {
 int main() {
   //test_alloc();
   //return 0;
-  freopen("log.txt", "w", stderr);
-  FILE* f = fopen("test.ra", "r");
+  freopen(TEST_DIRECTORY "log.txt", "w", stderr);
+  FILE* f = fopen(TEST_DIRECTORY "test.ra", "r");
   size_t siz = fread(buff, 1, 1024 * 1024 * 128, f);
   fclose(f);
   buff[siz] = '\0';
