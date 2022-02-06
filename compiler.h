@@ -751,10 +751,15 @@ class CodeGenerator : public ASTVisitor {
   LoopCtx *loop_ctx;
   jmp_buf *error_env;  //注意visit内不应手动申请内存
   int current_line;
+  Handle<String> filename;
 
  public:
-  CodeGenerator()
-      : ctx(nullptr), loop_ctx(nullptr), error_env(nullptr), current_line(0) {}
+  CodeGenerator(Handle<String> filename)
+      : filename(filename),
+        ctx(nullptr),
+        loop_ctx(nullptr),
+        error_env(nullptr),
+        current_line(0) {}
   Handle<FunctionData> Generate(FuncDecl *fd) {
     error_env = Allocate<jmp_buf>();
     ASSERT(error_env != nullptr);
@@ -784,8 +789,9 @@ class CodeGenerator : public ASTVisitor {
 
  private:
   //将FunctionCtx转换为SharedFunctionData
-  static inline Handle<SharedFunctionData> Translate(FunctionCtx *ctx) {
+  Handle<SharedFunctionData> Translate(FunctionCtx *ctx) {
     Handle<SharedFunctionData> sfd = Factory::NewSharedFunctionData();
+    sfd->filename = filename.ptr();
     sfd->name = *ctx->name;
     sfd->max_stack = ctx->max_stack;
     sfd->param_cnt = ctx->param_cnt;

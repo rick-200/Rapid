@@ -6,6 +6,7 @@
 #include "config.h"
 #include "factory.h"
 #include "list.h"
+#include "stringbuilder.h"
 namespace rapid {
 namespace internal {
 typedef Object *Slot;
@@ -619,7 +620,6 @@ class ExecuterImpl : public Executer {
             if (p != nullptr &&
                 p->value_ref ==
                     stack_value_ref) {  //在打开的外部变量链表中，直接添加
-
               fd->extvars->set(i, p);
             } else {  //不在打开的外部变量链表中，创建并添加到链表
               ExternVar *ev = NewExternVar();
@@ -686,7 +686,6 @@ class ExecuterImpl : public Executer {
 #endif
     }
   }
-
 
   Object *CallFunction(FunctionData *fd, const RawParameters &param) {
     if (fd->shared_data->param_cnt != param.count()) {
@@ -763,6 +762,28 @@ class ExecuterImpl : public Executer {
   }
   void RegisterModule(Handle<String> name, Handle<Object> md) {
     m_module->set(*name, *md);
+  }
+  Handle<String> GetStackTrace() {
+    StringBuilder sb;
+    for (auto &ci : list_ci) {
+      if (!ci.is_script_call) {
+        sb.AppendString("at [c++ code]\n");
+        continue;
+      }
+      int cmd_cnt = 0;
+      byte *pc = ci.fd->shared_data->instructions->begin();
+      while (pc != ci.pc) {
+        ASSERT(pc < ci.pc);
+        ++cmd_cnt;
+        pc += read_bytecode(pc, nullptr);
+      }
+      sb.AppendFormat(
+          "at %s:%d in function '%s'\n", ci.fd->shared_data->filename->cstr(),
+          Integer::cast(ci.fd->shared_data->bytecode_line->get(cmd_cnt))
+              ->value(),
+          ci.fd->shared_data->name->cstr());
+    }
+    return sb.ToString();
   }
 };
 

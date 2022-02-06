@@ -887,6 +887,7 @@ class TryCatchTable : public Struct {
 class SharedFunctionData : public Struct {
  public:
   String *name;
+  String *filename;  //所在文件名
   InstructionArray *instructions;
   FixedArray *kpool;
   FixedArray *inner_func;
@@ -897,8 +898,9 @@ class SharedFunctionData : public Struct {
   size_t param_cnt;
 
  private:
-  DECL_TRACEREF(SharedFunctionData, _M(name), _M(instructions), _M(kpool),
-                _M(inner_func), _M(vars), _M(extvars), _M(bytecode_line));
+  DECL_TRACEREF(SharedFunctionData, _M(name), _M(filename), _M(instructions),
+                _M(kpool), _M(inner_func), _M(vars), _M(extvars),
+                _M(bytecode_line));
 
  public:
   OBJECT_DEF(SharedFunctionData)

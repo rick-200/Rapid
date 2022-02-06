@@ -143,4 +143,22 @@ console.print("array:");
 for(var i=0;i<arr.length;i+=1){
     console.print(arr[i]);
 }
+
+function Animal(name){
+    function new(){
+        var _x,_y;
+        var func_table={
+            move: function(x,y){
+                _x=x;
+                _y=y;
+            }
+        }
+        return object.create(func_table);
+    }
+    var ret=new();
+    ret.name=name;
+    return ret;
+}
+
+
 */
