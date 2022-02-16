@@ -39,7 +39,24 @@ class ZoneList {
 
  public:
   ZoneList() : m_p(nullptr), m_siz(0), m_cap(0) {}
+  ZoneList(const ZoneList &) = delete;
+  ZoneList(ZoneList &&other) {
+    m_p = other.m_p;
+    m_siz = other.m_siz;
+    m_cap = other.m_cap;
+    other.m_p = nullptr;
+    other.m_siz = other.m_cap = 0;
+  }
   ~ZoneList() = default;
+  ZoneList& operator=(ZoneList&& other) {
+    m_p = other.m_p;
+    m_siz = other.m_siz;
+    m_cap = other.m_cap;
+    other.m_p = nullptr;
+    other.m_siz = other.m_cap = 0;
+    return *this;
+  }
+
   T *begin() const { return m_p; }
   T *end() const { return m_p + m_siz; }
   bool empty() { return m_siz == 0; }
@@ -71,7 +88,6 @@ class ZoneList {
     if (size <= m_cap) return;
     change_capacity(std::max(size, m_cap << 1));
   }
-  void shrink_to_fit() { change_capacity(m_siz); }
   void clear() { m_siz = 0; }
   const T &front() { return *m_p; }
   const T &back() { return m_p[m_siz - 1]; }
@@ -94,9 +110,9 @@ class ZoneList {
   V(BinaryExpr)         \
   V(AssignExpr)         \
   V(CallExpr)           \
-  V(ThisExpr)           \
   V(ParamsExpr)         \
-  V(ImportExpr) V(ArrayExpr) V(TableExpr) V(TryCatchStat) V(ForRangeStat)
+  V(ImportExpr)         \
+  V(ArrayExpr) V(DictionaryExpr) V(TryCatchStat) V(ForRangeStat) V(TableExpr)
 
 enum class AstNodeType {
 #define AstNodeType_ITER(t) t,
@@ -120,7 +136,6 @@ struct BlockStat : public Statement {
 struct Literal : public Expression {
   Handle<Object> value;
 };
-struct ThisExpr : public AssignableExpr {};
 struct ParamsExpr : public AssignableExpr {};
 struct ImportExpr : public AssignableExpr {};
 struct IfStat : public Statement {
@@ -196,13 +211,17 @@ struct CallExpr : public Expression {
 struct ArrayExpr : public Expression {
   ZoneList<Expression *> params;
 };
-struct TableParamPair {
+struct StrKeyExpValuePair {
   Handle<String> key;
   Expression *value;
 };
-struct TableExpr : public Expression {
-  ZoneList<TableParamPair> params;
+struct DictionaryExpr : public Expression {
+  ZoneList<StrKeyExpValuePair> params;
 };
+struct TableExpr : public Expression {
+  ZoneList<StrKeyExpValuePair> params;
+};
+
 struct AssignExpr : public Expression {
   AssignableExpr *left;
   Expression *right;

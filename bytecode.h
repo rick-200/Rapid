@@ -20,7 +20,7 @@ enum class Opcode : uint8_t {
   STOREE,
   LOADK,
   LOADE,
-  LOAD_THIS,
+  // LOAD_THIS,
   LOAD_PARAMS,
   IMPORT,
   COPY,  //复制栈顶并push到栈上
@@ -28,15 +28,19 @@ enum class Opcode : uint8_t {
   // 不需要此指令，因为变量就保存在计算栈上，无需操作
   PUSH_NULL,  //用于定义变量时将初始值null push到栈上
   POP,
-  POPN,  // pop n个，u8
+  POPN,  // pop n个，u8[n]
 
   CLOSE,  // u16 关闭一个externvar
 
-  MAKE_ARRAY,    // u16[元素个数]
+  MAKE_ARRAY,    // u16[元素个数] ; <item_0> <item_1> ... <item_n>
   MAKE_ARRAY_0,  // 0
 
-  MAKE_TABLE,    // u16[键值对的个数]
-  MAKE_TABLE_0,  // 0
+  MAKE_DICTIONARY,    // u16[键值对的个数] ; <key_0> <val_0> ... <key_n> <val_n>
+  MAKE_DICTIONARY_0,  // 0
+
+  MAKE_TABLE,  // u16[tableinfo索引] ;<prop_val_0> <prop_val_1> ... <prop_val_n>
+
+  TABLE_INIT,  // 0 ; <FixedArray:元素名称数组>
 
   ADD,
   SUB,
@@ -75,9 +79,8 @@ enum class Opcode : uint8_t {
   NEG,
   ACT,
 
-  CALL,       // CALL 3 -> func p1 p2 p3
-  THIS_CALL,  // THIS_CALL 3 -> obj func_name p1 p2 p3
-              //
+  CALL,  // CALL 3 -> func p1 p2 p3
+
   RET,
   RETNULL,
   CLOSURE,
@@ -301,10 +304,11 @@ inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
     CASE_u16(CLOSE);
     CASE_u16(MAKE_ARRAY);
     CASE_0(MAKE_ARRAY_0);
+    CASE_u16(MAKE_DICTIONARY);
+    CASE_0(MAKE_DICTIONARY_0);
     CASE_u16(MAKE_TABLE);
-    CASE_0(MAKE_TABLE_0);
     CASE_0(IMPORT);
-    CASE_0(LOAD_THIS);
+    // CASE_0(LOAD_THIS);
     CASE_0(LOAD_PARAMS);
     CASE_0(COPY);
     CASE_0(PUSH_NULL);
@@ -338,7 +342,7 @@ inline uintptr_t read_bytecode(byte* pc, char* pbuf) {
     CASE_0(NEG);
     CASE_0(ACT);
     CASE_u16(CALL);
-    CASE_u16(THIS_CALL);
+    // CASE_u16(THIS_CALL);
     CASE_0(RET);
     CASE_0(RETNULL);
     CASE_s16(JMP);

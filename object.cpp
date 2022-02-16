@@ -10,92 +10,92 @@ void Array::change_capacity(size_t new_cap) {
   for (size_t i = 0; i < m_length; i++) h->set(i, m_array->get(i));
   m_array = h.ptr();
 }
-// Array implement --------------------------------------
-Object* Array::invoke_metafunction(Object* obj, MetaFunctionID id,
-                                   const Parameters& params) {
-  Array* _this = Array::cast(obj);
-  const RawParameters& rp = params;
+//// Array implement --------------------------------------
+//Object* Array::invoke_metafunction(Object* obj, MetaFunctionID id,
+//                                   const Parameters& params) {
+//  Array* _this = Array::cast(obj);
+//  const RawParameters& rp = params;
+//
+//  if (id == MetaFunctionID::GET_INDEX) {
+//    ASSERT(rp.count() == 1 && rp[0]->IsInteger());
+//    int64_t pos = Integer::cast(rp[0])->value();
+//    if (pos < 0 || pos >= _this->length()) VERIFY(0);
+//    return _this->get(pos);
+//  } else if (id == MetaFunctionID::SET_INDEX) {
+//    ASSERT(rp.count() == 2 && rp[0]->IsInteger());
+//    int64_t pos = Integer::cast(rp[0])->value();
+//    if (pos < 0 || pos >= _this->length()) VERIFY(0);
+//    _this->set(pos, rp[1]);
+//    return nullptr;
+//  }
+//  return Failure::NotImplemented;
+//}
+//Object* Array::invoke_memberfunc(Object* obj, String* name,
+//                                 const Parameters& params) {
+//  const RawParameters rp = params;
+//  Array* _this = Array::cast(obj);
+//  if (String::Equal(name, "push")) {
+//    if (rp.count() != 1) VERIFY(0);
+//    _this->push(rp[0]);
+//    return nullptr;
+//  } else if (String::Equal(name, "reserve")) {
+//    if (rp.count() != 1 || rp[0]->IsInteger()) VERIFY(0);
+//    _this->reserve(Integer::cast(rp[0])->value());
+//    return nullptr;
+//  }
+//  return Failure::NotImplemented;
+//}
 
-  if (id == MetaFunctionID::GET_INDEX) {
-    ASSERT(rp.count() == 1 && rp[0]->IsInteger());
-    int64_t pos = Integer::cast(rp[0])->value();
-    if (pos < 0 || pos >= _this->length()) VERIFY(0);
-    return _this->get(pos);
-  } else if (id == MetaFunctionID::SET_INDEX) {
-    ASSERT(rp.count() == 2 && rp[0]->IsInteger());
-    int64_t pos = Integer::cast(rp[0])->value();
-    if (pos < 0 || pos >= _this->length()) VERIFY(0);
-    _this->set(pos, rp[1]);
-    return nullptr;
-  }
-  return Failure::NotImplemented;
-}
-Object* Array::invoke_memberfunc(Object* obj, String* name,
-                                 const Parameters& params) {
-  const RawParameters rp = params;
-  Array* _this = Array::cast(obj);
-  if (String::Equal(name, "push")) {
-    if (rp.count() != 1) VERIFY(0);
-    _this->push(rp[0]);
-    return nullptr;
-  } else if (String::Equal(name, "reserve")) {
-    if (rp.count() != 1 || rp[0]->IsInteger()) VERIFY(0);
-    _this->reserve(Integer::cast(rp[0])->value());
-    return nullptr;
-  }
-  return Failure::NotImplemented;
-}
+// Dictionary implement-------------------------------------------------------
 
-// Table implement-------------------------------------------------------
-
-void Table::rehash_expand() {
-  Handle<FixedTable> h = Factory::NewFixedTable(m_table->size() << 1);
+void Dictionary::rehash_expand() {
+  Handle<FixedDictionary> h = Factory::NewFixedDictionary(m_table->size() << 1);
   m_table->rehash_to(h.ptr());
   m_table = h.ptr();
 }
 
-void Table::try_rehash_shrink() {
+void Dictionary::try_rehash_shrink() {
   if (m_table->used() > (m_table->size() >> 3 /* size/8 */)) return;
-  Handle<FixedTable> h = Factory::NewFixedTable(m_table->used() << 2);
+  Handle<FixedDictionary> h = Factory::NewFixedDictionary(m_table->used() << 2);
   m_table->rehash_to(h.ptr());
   m_table = h.ptr();
 }
 
-Object* Table::invoke_metafunction(Object* obj, MetaFunctionID id,
-                                   const Parameters& params) {
-  Table* _this = Table::cast(obj);
-  const RawParameters& rp = params;
-  if (id == MetaFunctionID::GET_INDEX) {
-    ASSERT(rp.count() == 1 && rp[0]->IsString());
-    return _this->get(String::cast(rp[0]));
-  } else if (id == MetaFunctionID::SET_INDEX) {
-    ASSERT(rp.count() == 2 && rp[0]->IsString());
-    _this->set(String::cast(rp[0]), rp[1]);
-    return nullptr;
-  }
-  return Failure::NotImplemented;
-}
-
-Object* Table::invoke_memberfunc(Object* obj, String* name,
-                                 const Parameters& params) {
-  return Failure::NotImplemented;
-
-  //Table* _this = Table::cast(obj);
-  //const RawParameters& rp = params;
-  //if (String::Equal(name, "size")) {
-  //  if (rp.count() != 0) VERIFY(0);
-  //}
-  //return nullptr;
-}
+//Object* Dictionary::invoke_metafunction(Object* obj, MetaFunctionID id,
+//                                   const Parameters& params) {
+//  Dictionary* _this = Dictionary::cast(obj);
+//  const RawParameters& rp = params;
+//  if (id == MetaFunctionID::GET_INDEX) {
+//    ASSERT(rp.count() == 1 && rp[0]->IsString());
+//    return _this->get(String::cast(rp[0]));
+//  } else if (id == MetaFunctionID::SET_INDEX) {
+//    ASSERT(rp.count() == 2 && rp[0]->IsString());
+//    _this->set(String::cast(rp[0]), rp[1]);
+//    return nullptr;
+//  }
+//  return Failure::NotImplemented;
+//}
+//
+//Object* Dictionary::invoke_memberfunc(Object* obj, String* name,
+//                                 const Parameters& params) {
+//  return Failure::NotImplemented;
+//
+//  //Dictionary* _this = Dictionary::cast(obj);
+//  //const RawParameters& rp = params;
+//  //if (String::Equal(name, "size")) {
+//  //  if (rp.count() != 0) VERIFY(0);
+//  //}
+//  //return nullptr;
+//}
 //----------------------------------------------------------------
-Object* Object::get_property(Object* obj, String* name, AccessSpecifier spec) {
-  return Failure::NotImplemented;
-}
-
-Object* Object::set_property(Object* obj, String* name, Object* val,
-                             AccessSpecifier spec) {
-  return Failure::NotImplemented;
-}
+//Object* Object::get_property(Object* obj, String* name, AccessSpecifier spec) {
+//  return Failure::NotImplemented;
+//}
+//
+//Object* Object::set_property(Object* obj, String* name, Object* val,
+//                             AccessSpecifier spec) {
+//  return Failure::NotImplemented;
+//}
 
 // Object* Object::get_metafunction(Object* obj, MetaFunctionID id) {
 //  return Failure::NotImplemented;
@@ -106,17 +106,17 @@ Object* Object::set_property(Object* obj, String* name, Object* val,
 //  return Failure::NotImplemented;
 //}
 
-Object* Object::invoke_metafunction(Object* obj, MetaFunctionID id,
-                                    const Parameters& params) {
-  return Failure::NotImplemented;
-}
-Object* Object::invoke_memberfunc(Object* obj, String* name,
-                                  const Parameters& params) {
-  return Failure::NotImplemented;
-}
-
-void Object::trace_ref(Object* obj, GCTracer* gct) {}
-
+//Object* Object::invoke_metafunction(Object* obj, MetaFunctionID id,
+//                                    const Parameters& params) {
+//  return Failure::NotImplemented;
+//}
+//Object* Object::invoke_memberfunc(Object* obj, String* name,
+//                                  const Parameters& params) {
+//  return Failure::NotImplemented;
+//}
+//
+//void Object::trace_ref(Object* obj, GCTracer* gct) {}
+//
 void debug_print(FILE* f, Object* obj) {
   if (obj->IsInteger()) {
     fprintf(f, "<int>%lld", Integer::cast(obj)->value());
@@ -132,10 +132,12 @@ void debug_print(FILE* f, Object* obj) {
     fprintf(f, "<array>");
   } else if (obj->IsFixedArray()) {
     fprintf(f, "<finedarray>");
+  } else if (obj->IsDictionary()) {
+    fprintf(f, "<dictionary>");
+  } else if (obj->IsFixedDictionary()) {
+    fprintf(f, "<fixed_dictionary>");
   } else if (obj->IsTable()) {
     fprintf(f, "<table>");
-  } else if (obj->IsFixedTable()) {
-    fprintf(f, "<fixedtable>");
   } else if (obj->IsFunctionData()) {
     fprintf(f, "<funcdata>%p:%s@%p", FunctionData::cast(obj),
             FunctionData::cast(obj)->shared_data->name->cstr(),
@@ -144,10 +146,6 @@ void debug_print(FILE* f, Object* obj) {
     fprintf(f, "<sharedfuncdata>%s@%p",
             SharedFunctionData::cast(obj)->name->cstr(),
             SharedFunctionData::cast(obj));
-  } else if (obj->IsNativeObject()) {
-    fprintf(f, "<native_obj>%p", NativeObject::cast(obj));
-  } else if (obj->IsStruct()) {
-    fprintf(f, "<struct>");
   } else {
     fprintf(f, "<unknown>");
   }

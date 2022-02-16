@@ -2,54 +2,23 @@
 #include <array>
 #include <chrono>
 #include <iostream>
+#include <thread>
 #include <unordered_set>
 
 #include "ast.h"
 #include "ast_visualizer.h"
 #include "compiler.h"
-#include "console.h"
+#include "standerd_module.h"
 #include "engine.h"
 #include "factory.h"
 #include "handle.h"
+#include "native_object_interface.h"
 #include "object.h"
 using namespace rapid;
 using namespace internal;
 
 #define TEST_DIRECTORY "E:/Script/Rapid/test/"
 
-void print_object(Object* obj) {
-  if (obj->IsNull())
-    printf("null");
-  else if (obj->IsInteger())
-    printf("%lld", Integer::cast(obj)->value());
-  else if (obj->IsFloat())
-    printf("%g", Float::cast(obj)->value());
-  else if (obj->IsString())
-    printf("\"%s\"", String::cast(obj)->cstr());
-  else if (obj->IsSpecialValue())
-    printf("%s", obj->IsNull() ? "null" : obj->IsTrue() ? "true" : "false");
-  else
-    printf("[object]");
-}
-void print_token(const Token& t) {
-  printf("[%d,%d] ", t.row, t.col);
-  switch (t.t) {
-#define PRINT_ITERATOR(_t, _s) \
-  case _t:                     \
-    std::cout << (_s);         \
-    break;
-    TT_ITER_CONTROL(PRINT_ITERATOR);
-    TT_ITER_KEWWORD(PRINT_ITERATOR);
-    TT_ITER_OPERATOR(PRINT_ITERATOR);
-    case TokenType::KVAL:
-      printf("k ");
-      print_object(t.v.ptr());
-      break;
-    case TokenType::SYMBOL:
-      printf("sym %s", String::cast(t.v.ptr())->cstr());
-      break;
-  }
-}
 char buff[1024 * 1024 * 128];
 
 void do_tokenlize(int64_t* ti, int64_t* cnt) {
@@ -72,7 +41,7 @@ void do_tokenlize(int64_t* ti, int64_t* cnt) {
 }
 
 void test_parse(Handle<String> code) {
-  Parser parser;
+  Parser parser(Factory::NewString("test.rs"));
   std::chrono::high_resolution_clock::time_point t =
       std::chrono::high_resolution_clock::now();
   FuncDecl* ast = parser.ParseModule(code);
@@ -89,10 +58,10 @@ void test_parse(Handle<String> code) {
   fclose(f);
 }
 void test_compile(Handle<String> code) {
-  Parser parser;
+  Parser parser(Factory::NewString("test.rs"));
   FuncDecl* ast = parser.ParseModule(code);
   if (ast == nullptr) {
-    printf(Executer::GetException()->info()->cstr());
+    printf(Executer::GetException()->info->cstr());
     fflush(stdout);
     exit(0);
   }
@@ -102,10 +71,10 @@ void test_compile(Handle<String> code) {
   fprintf(f, "```\n");
   fclose(f);
 
-  CodeGenerator cg;
+  CodeGenerator cg(Factory::NewString("test.rs"));
   Handle<FunctionData> fd = cg.Generate(ast);
   if (fd.empty()) {
-    printf(Executer::GetException()->info()->cstr());
+    printf(Executer::GetException()->info->cstr());
     fflush(stdout);
     exit(0);
   }
@@ -117,7 +86,7 @@ void test_compile(Handle<String> code) {
   fclose(f);
   Executer::RegisterModule(Factory::NewString("console"),
                            stdmodule::GetConsoleModule());
-  Parameters param(nullptr, nullptr, 0);
+  Parameters param(nullptr, 0);
 
   std::chrono::high_resolution_clock::time_point t =
       std::chrono::high_resolution_clock::now();
@@ -146,6 +115,12 @@ void test_compile(Handle<String> code) {
 //}
 
 int main() {
+  /*for (int i = 0; i < 10; i++) {
+    UUID id = UUID::Create("Rick Wang");
+    printf("{%llX, %llX}\n", id.get_val0(), id.get_val1());
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  return 0;*/
   // test_alloc();
   // return 0;
   freopen(TEST_DIRECTORY "log.txt", "w", stderr);
@@ -186,7 +161,7 @@ int main() {
   // printf("%.2f tokens per s\n", (double)cnt / t * 1000 * 1000 * 1000);
   //{
   //  HandleScope hs;
-  //  Handle<Table> tb = Factory::NewTable();
+  //  Handle<Dictionary> tb = Factory::NewDictionary();
   //  tb->set(Factory::NewString("a").ptr(), Integer::FromInt64(1));
   //  tb->set(Factory::NewString("b").ptr(), Integer::FromInt64(2));
   //  tb->set(Factory::NewString("c").ptr(), Integer::FromInt64(3));
@@ -215,3 +190,14 @@ int main() {
 
   return 0;
 }
+/*
+
+
+{17EF779BAD2E740, 15902275E1A5618E}
+{17EF779BAE1DAE1, 15902275E1A53BF1}
+{17EF779BAF1945C, 15902275E1A5485E}
+{17EF779BB013CC5, 15902275E1A5CC17}
+{17EF779BB10D544, 15902275E1A5659B}
+{17EF779BB2012F5, 15902275E1A52899}
+
+*/

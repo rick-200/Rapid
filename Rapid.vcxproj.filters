@@ -57,6 +57,9 @@
     <ClCompile Include="console.cpp">
       <Filter>standard_module</Filter>
     </ClCompile>
+    <ClCompile Include="exception_tree.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="object.h">
@@ -119,14 +122,29 @@
     <ClInclude Include="config.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="console.h">
-      <Filter>standard_module</Filter>
-    </ClInclude>
     <ClInclude Include="util.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="native_module.h">
+    <ClInclude Include="standerd_module.h">
       <Filter>standard_module</Filter>
+    </ClInclude>
+    <ClInclude Include="std_object.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="api.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="invasive_list.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="exception_tree.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="native_object_interface.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="uuid.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

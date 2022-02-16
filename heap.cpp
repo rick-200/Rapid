@@ -6,6 +6,7 @@
 #include <type_traits>
 
 #include "debug.h"
+#include "exception_tree.h"
 #include "executer.h"
 #include "global.h"
 #include "handle.h"
@@ -19,49 +20,40 @@ class HeapImpl /*public: Heap --
 {
   size_t m_usage;
   size_t m_last_gc_usage;  //上次gc后
+  size_t m_memory_limit;   //内存使用的上限
   uint8_t m_color;
   Object *m_true, *m_false;
   bool m_enable_gc;
   // Object  *m_null;
-  struct {
-    HeapObject *first, *last;
-  } m_objs, m_roots;
-  uint64_t m_object_count;
+  IntrusiveForwardList<HeapObject, &HeapObject::m_nextobj> m_objs;
 
  public:
   //用于为VS的堆分析提供类型参数
   template <class T>
   __declspec(allocator) T *AllocObject(size_t size) {
     static_assert(std::is_base_of_v<HeapObject, T>, "");
+    if (m_usage + size > m_memory_limit) return nullptr;
     T *p = (T *)malloc(size);
+    if (p == nullptr) return nullptr;
     m_usage += size;
-    p->m_alloc_size = size;
     return p;
   }
   void Register(HeapObject *obj) {
-    ++this->m_object_count;
-    obj->m_gctag = this->m_color;
-    obj->m_nextobj = nullptr;
-    this->m_objs.last->m_nextobj = obj;
-    this->m_objs.last = obj;
+    obj->m_tag.set_gccolor(this->m_color);
+    m_objs.push(obj);
   }
 
-  void RegisterRoot(HeapObject *obj) {
-    obj->m_nextobj = nullptr;
-    this->m_roots.last->m_nextobj = obj;
-    this->m_roots.last = obj;
-  }
+  // void RegisterRoot(HeapObject *obj) {
+  //  obj->m_nextobj = nullptr;
+  //  this->m_roots.last->m_nextobj = obj;
+  //  this->m_roots.last = obj;
+  //}
 
   void FreeObject(HeapObject *obj) {
-    /* switch (obj->m_heapobj_type) {
-       case HeapObjectType::Array: break;
-       case HeapObjectType::String: break;
-       case HeapObjectType::Table: break;
-       case HeapObjectType::FuncData: break;
-       default: ASSERT(0);
-     }*/
-    m_usage -= obj->m_alloc_size;
-    --this->m_object_count;
+    m_usage -= obj->m_tag.allocated_size();
+    // if (obj->IsNativeObject()) {
+    //  NativeObject::cast(obj)->m_free(NativeObject::cast(obj)->m_obj);
+    //}
     free(obj);
   }
 
@@ -70,47 +62,9 @@ class HeapImpl /*public: Heap --
     VERIFY(h != nullptr);
     h->m_color = 0;
     h->m_usage = 0;
-    h->m_object_count = 0;
     h->m_enable_gc = false;
     h->m_last_gc_usage = 1024;
-
-    h->m_objs.first = h->m_objs.last =
-        (HeapObject *)h->AllocObject<HeapObject>(sizeof(HeapObject));
-    h->m_objs.last->m_gctag = h->m_color;
-    h->m_objs.last->m_nextobj = nullptr;
-
-    h->m_roots.first = h->m_roots.last =
-        (HeapObject *)h->AllocObject<HeapObject>(sizeof(HeapObject));
-    h->m_roots.last->m_gctag = h->m_color;
-    h->m_roots.last->m_nextobj = nullptr;
-
-    // h->m_null =
-    //(SpecialValue *)h->AllocObject<SpecialValue>(sizeof(SpecialValue));
-    h->m_true =
-        (SpecialValue *)h->AllocObject<SpecialValue>(sizeof(SpecialValue));
-    h->m_false =
-        (SpecialValue *)h->AllocObject<SpecialValue>(sizeof(SpecialValue));
-
-    // reinterpret_cast<SpecialValue *>(h->m_null)->m_heapobj_type =
-    // HeapObjectType::SpecialValue;
-    reinterpret_cast<SpecialValue *>(h->m_true)->m_heapobj_type =
-        HeapObjectType::SpecialValue;
-    reinterpret_cast<SpecialValue *>(h->m_false)->m_heapobj_type =
-        HeapObjectType::SpecialValue;
-
-    // reinterpret_cast<SpecialValue *>(h->m_null)->m_interface =
-    //&SpecialValue::Interface;
-    reinterpret_cast<SpecialValue *>(h->m_true)->m_interface =
-        &SpecialValue::Interface;
-    reinterpret_cast<SpecialValue *>(h->m_false)->m_interface =
-        &SpecialValue::Interface;
-
-    // reinterpret_cast<SpecialValue *>(h->m_null)->m_val =
-    // SpecialValue::NullVal;
-    reinterpret_cast<SpecialValue *>(h->m_true)->m_val = SpecialValue::TrueVal;
-    reinterpret_cast<SpecialValue *>(h->m_false)->m_val =
-        SpecialValue::FalseVal;
-
+    Construct(&h->m_objs);
     return h;
   }
 
@@ -118,102 +72,170 @@ class HeapImpl /*public: Heap --
     // TODO:实现HeapImpl::Destory
   }
 
-#define ALLOC_HEAPOBJECT(_p, _t)                    \
-  static_assert(std::is_same_v<decltype(_p), _t *>, \
-                "ALLOC_HEAPOBJECT type not match"); \
-  _p->m_heapobj_type = HeapObjectType::_t;          \
-  _p->m_interface = &_t::Interface;                 \
-  Register(_p);
-
   String *AllocString(const char *cstr, size_t length) {
-    String *s = (String *)AllocObject<String>(sizeof(String) + length + 1);
+    size_t alloc_size = sizeof(String) + length + 1;
+    String *s = (String *)AllocObject<String>(alloc_size);
+    if (s == nullptr) return nullptr;
+    s->m_tag = HeapObjectTag{HeapObjectType::String, alloc_size};
     s->m_length = length;
     s->m_hash = hash_string(cstr, length);
     s->m_cached = false;
     memcpy(s->m_data, cstr, length);
     s->m_data[length] = '\0';
-    ALLOC_HEAPOBJECT(s, String);
+    Register(s);
     return s;
   }
   Array *AllocArray(size_t reserved) {
     Array *p = (Array *)AllocObject<Array>(sizeof(Array));
+    if (p == nullptr) return nullptr;
+    p->m_tag = HeapObjectTag{HeapObjectType::Array, sizeof(Array)};
     p->m_length = 0;
     p->m_array = AllocFixedArray(reserved);
-    ALLOC_HEAPOBJECT(p, Array);
+    if (p->m_array == nullptr) {
+      free(p);
+      return nullptr;
+    }
+    Register(p);
     return p;
   }
-  Table *AllocTable(size_t reserve) {
-    Table *p = (Table *)AllocObject<Table>(sizeof(Table));
-    p->m_table = AllocFixedTable(reserve * 2);
-    ALLOC_HEAPOBJECT(p, Table);
+  Dictionary *AllocDictionary(size_t reserve) {
+    Dictionary *p = (Dictionary *)AllocObject<Dictionary>(sizeof(Dictionary));
+    if (p == nullptr) return nullptr;
+    p->m_tag = HeapObjectTag{HeapObjectType::Dictionary, sizeof(Dictionary)};
+    p->m_table = AllocFixedDictionary(reserve * 2);
+    if (p->m_table == nullptr) {
+      free(p);
+      return nullptr;
+    }
+    Register(p);
     return p;
   }
   FixedArray *AllocFixedArray(size_t length) {
-    FixedArray *p = (FixedArray *)AllocObject<FixedArray>(
-        sizeof(FixedArray) + sizeof(Object *) * length);
+    size_t alloc_size = sizeof(FixedArray) + sizeof(Object *) * length;
+    FixedArray *p = (FixedArray *)AllocObject<FixedArray>(alloc_size);
+    if (p == nullptr) return nullptr;
+    p->m_tag = HeapObjectTag{HeapObjectType::FixedArray, alloc_size};
     p->m_length = length;
-    // Object *null_v = NullValue();
     for (size_t i = 0; i < length; i++) p->m_data[i] = nullptr;
-    ALLOC_HEAPOBJECT(p, FixedArray);
+    Register(p);
     return p;
   }
   InstructionArray *AllocInstructionArray(size_t length) {
-    InstructionArray *p = (InstructionArray *)AllocObject<InstructionArray>(
-        sizeof(InstructionArray) + sizeof(Cmd) * length);
+    size_t alloc_size = sizeof(InstructionArray) + sizeof(byte) * length;
+    InstructionArray *p =
+        (InstructionArray *)AllocObject<InstructionArray>(alloc_size);
+    if (p == nullptr) return nullptr;
+    p->m_tag = HeapObjectTag{HeapObjectType::InstructionArray, alloc_size};
     p->m_length = length;
-    memset(p->m_data, 0, sizeof(Cmd) * length);
-    ALLOC_HEAPOBJECT(p, InstructionArray);
+    memset(p->m_data, 0, sizeof(byte) * length);
+    Register(p);
     return p;
   }
-  FixedTable *AllocFixedTable(size_t size) {
-    FixedTable *p = (FixedTable *)AllocObject<FixedTable>(
-        sizeof(FixedTable) + sizeof(TableNode) * size);
+  FixedDictionary *AllocFixedDictionary(size_t size) {
+    size_t alloc_size = sizeof(FixedDictionary) + sizeof(DictionaryNode) * size;
+    FixedDictionary *p =
+        (FixedDictionary *)AllocObject<FixedDictionary>(alloc_size);
+    if (p == nullptr) return nullptr;
+    p->m_tag = HeapObjectTag{HeapObjectType::FixedDictionary, alloc_size};
     p->m_size = size;
     p->m_used = 0;
     p->m_pfree = p->m_data;
-    memset(p->m_data, 0, sizeof(TableNode) * size);
-    ALLOC_HEAPOBJECT(p, FixedTable);
+    memset(p->m_data, 0, sizeof(DictionaryNode) * size);
+    Register(p);
     return p;
   }
-  NativeObject *AllocNativeObject(void *data,
-                                  const ObjectInterface *interface) {
-    NativeObject *p =
-        (NativeObject *)AllocObject<NativeObject>(sizeof(NativeObject));
-    ALLOC_HEAPOBJECT(p, NativeObject);  //此处也会写入m_interface，放前面
+  // NativeObject *AllocNativeObject(NativeObjectBase *obj,
+  //                                FreeMemoryFunction free_func) {
+  //  NativeObject *p = AllocObject<NativeObject>(sizeof(NativeObject));
+  //  if (p == nullptr) return nullptr;
+  //  p->m_tag =
+  //      HeapObjectTag{HeapObjectType::NativeObject, sizeof(NativeObject)};
+  //  p->m_obj = obj;
+  //  p->m_free = free_func;
+  //  Register(p);
+  //  return p;
+  //}
+
+  VarInfoArray *AllocVarInfoArray(size_t length) {
+    size_t alloc_size = sizeof(VarInfoArray) + sizeof(VarInfoStruct) * length;
+    VarInfoArray *p = AllocObject<VarInfoArray>(alloc_size);
+    if (p == nullptr) return nullptr;
+    p->m_tag = HeapObjectTag{HeapObjectType::VarInfoArray, alloc_size};
+    p->m_length = length;
+    Register(p);
+    return p;
+  }
+  ExternVarInfoArray *AllocExternVarInfoArray(size_t length) {
+    size_t alloc_size =
+        sizeof(ExternVarInfoArray) + sizeof(ExternVarInfoStruct) * length;
+    ExternVarInfoArray *p = AllocObject<ExternVarInfoArray>(alloc_size);
+    if (p == nullptr) return nullptr;
+    p->m_tag = HeapObjectTag{HeapObjectType::ExternVarInfoArray, alloc_size};
+    p->m_length = length;
+    Register(p);
+    return p;
+  }
+  TableInfo *AllocTableInfo(FixedArray *prop_list) {
+    FixedDictionary *prop_dict = AllocFixedDictionary(prop_list->length() * 2);
+    for (size_t i = 0; i < prop_list->length(); i++) {
+      Object *ret = prop_dict->set(String::cast(prop_list->get(i)),
+                                   Integer::FromInt64(i));
+      ASSERT(!ret->IsFailure());
+    }
+    if (prop_dict == nullptr) return nullptr;
+    TableInfo *p = AllocObject<TableInfo>(sizeof(TableInfo));
+    if (p == nullptr) {
+      free(prop_dict);
+      return nullptr;
+    }
+    p->m_tag = HeapObjectTag{HeapObjectType::TableInfo, sizeof(TableInfo)};
+    p->m_prop_idx = prop_dict;
+    p->m_prop_name = prop_list;
+    Register(p);
+    return p;
+  }
+  Table *AllocTable(TableInfo *info) {
+    size_t alloc_size = sizeof(Table) + sizeof(Object *) * info->prop_count();
+    Table *p = AllocObject<Table>(alloc_size);
+    if (p == nullptr) return nullptr;
+    p->m_tag = HeapObjectTag{HeapObjectType::Table, alloc_size};
+    p->m_info = info;
+    memset(p->m_data, 0, sizeof(Object *) * info->prop_count());
+    Register(p);
+    return p;
+  }
+  NativeObject *AllocNativeObject(const NativeObjectInterface *interface,
+                                  void *data) {
+    NativeObject *p = AllocObject<NativeObject>(sizeof(NativeObject));
+    if (p == nullptr) return nullptr;
+    p->m_tag =
+        HeapObjectTag{HeapObjectType::NativeObject, sizeof(NativeObject)};
     p->m_interface = interface;
     p->m_data = data;
     return p;
   }
-  Exception *AllocExpection(String *type, String *info, Object *data) {
-    Exception *p = (Exception *)AllocObject<Exception>(sizeof(Exception));
-    p->m_type = type;
-    p->m_info = info;
-    p->m_data = data;
-    p->m_stacktrace = AllocArray(0);
-    ALLOC_HEAPOBJECT(p, Exception);
+
+  template <class T>
+  T *AllocStruct(HeapObjectType t) {
+    T *p = (T *)AllocObject<T>(sizeof(T));
+    if (p == nullptr) return nullptr;
+    memset(p, 0, sizeof(T));
+    p->m_tag = HeapObjectTag{t, sizeof(T)};
+    Register(p);
     return p;
   }
+#define ALLOC_STRUCT(_T) AllocStruct<_T>(HeapObjectType::_T)
+  FunctionData *AllocFunctionData() { return ALLOC_STRUCT(FunctionData); }
+  ExternVar *AllocExternVar() { return ALLOC_STRUCT(ExternVar); }
+  SharedFunctionData *AllocSharedFunctionData() {
+    return ALLOC_STRUCT(SharedFunctionData);
+  }
+  StackTraceData *AllocStackTraceData() { return ALLOC_STRUCT(StackTraceData); }
+  Exception *AllocException() { return ALLOC_STRUCT(Exception); }
+#undef ALLOC_STRUCT
+
   void EnableGC() { m_enable_gc = true; }
-  // Object *NullValue() { return this->m_null; }
-  Object *TrueValue() { return this->m_true; }
-  Object *FalseValue() { return this->m_false; }
-#define ALLOC_STRUCT_IMPL(_t)                \
-  _t *p = (_t *)AllocObject<_t>(sizeof(_t)); \
-  memset(p, 0, sizeof(_t));                  \
-  p->m_alloc_size = sizeof(_t);              \
-  ALLOC_HEAPOBJECT(p, _t);                   \
-  return p;
-#define ITERATOR_DEF_ALLOC_STRUCT(T) \
-  T *Alloc##T() { ALLOC_STRUCT_IMPL(T); }
-  ITER_STRUCT_DERIVED(ITERATOR_DEF_ALLOC_STRUCT)
-  //VarInfo *AllocVarData() { ALLOC_STRUCT_IMPL(VarInfo); }
-  //ExternVarInfo *AllocExternVarData() { ALLOC_STRUCT_IMPL(ExternVarInfo); }
-  //SharedFunctionData *AllocSharedFunctionData() {
-  //  ALLOC_STRUCT_IMPL(SharedFunctionData);
-  //}
-  //ExternVar *AllocExternVar() { ALLOC_STRUCT_IMPL(ExternVar); }
-  //FunctionData *AllocFunctionData() { ALLOC_STRUCT_IMPL(FunctionData); }
-  uint64_t ObjectCount() { return this->m_object_count; }
+  uint64_t ObjectCount() { return m_objs.count(); }
   void DoGC() {
     if (!m_enable_gc) return;
     size_t pre_gc_usage = m_usage;
@@ -221,49 +243,29 @@ class HeapImpl /*public: Heap --
     // DBG_LOG("begin gc\n");
     this->m_color = (this->m_color + 1) & 1;
     GCTracer gct(this->m_color);
-    // DBG_LOG("begin trace\n");
-    for (HeapObject *p = this->m_roots.first->m_nextobj; p != nullptr;
-         p = p->m_nextobj) {
-      gct.Trace(p);
-      // DBG_LOG("trace object: %p\n", p);
-    }
     Executer::TraceStack(&gct);
-    // DBG_LOG("trace HandleContainer\n");
     HandleContainer::TraceRef(&gct);
-    // DBG_LOG("end trace\n");
-    HeapObject *p = this->m_objs.first->m_nextobj, *pre = this->m_objs.first;
-    // DBG_LOG("begin sweep\n");
-    while (p != nullptr) {
-      if (p->m_gctag != this->m_color) {
-        HeapObject *pdel = p;
-        ASSERT((p == this->m_objs.last) == (p->m_nextobj == nullptr));
-        if (p == this->m_objs.last) {
-          this->m_objs.last = pre;
-        }
-        p = p->m_nextobj;
-        pre->m_nextobj = p;
-
-        DBG_LOG("sweep object:%p\n", pdel);
-        FreeObject(pdel);
-      } else {
-        pre = p;
-        p = p->m_nextobj;
-      }
-    }
-    // DBG_LOG("end sweep\n");
-    // DBG_LOG("end gc\n");
+    ExceptionTree::TraceMember(&gct);
+    m_objs.for_each([this](HeapObject *p) -> bool {
+      if (p->m_tag.gccolor() == m_color) return false;
+      DBG_LOG("sweep object:%p\n", p);
+      FreeObject(p);
+      return true;
+    });
     DBG_LOG("gc complete: before:%llu after:%llu reduce:%lld\n", pre_gc_usage,
             m_usage, pre_gc_usage - m_usage);
     m_last_gc_usage = m_usage;
   }
+  void DoGCIfNeed() {
+    if (m_usage > m_last_gc_usage * 2) DoGC();
+  }
   bool NeedGC() { return m_usage > m_last_gc_usage * 2; }
   void PrintHeap() {
-    HeapObject *p = this->m_objs.first->m_nextobj;
-    while (p != nullptr) {
+    m_objs.for_each([](HeapObject *p) -> bool {
       debug_print(stdout, p);
       printf("\n");
-      p = p->m_nextobj;
-    }
+      return false;
+    });
   }
 };
 #define CALL_HEAP_IMPL(_f, ...) \
@@ -279,30 +281,23 @@ String *Heap::AllocString(const char *cstr, size_t length) {
 Array *Heap::AllocArray(size_t reserved) {
   return CALL_HEAP_IMPL(AllocArray, reserved);
 }
-Table *Heap::AllocTable(size_t reserved) {
-  return CALL_HEAP_IMPL(AllocTable, reserved);
+Dictionary *Heap::AllocDictionary(size_t reserved) {
+  return CALL_HEAP_IMPL(AllocDictionary, reserved);
 }
 FixedArray *Heap::AllocFixedArray(size_t length) {
   return CALL_HEAP_IMPL(AllocFixedArray, length);
 }
-FixedTable *Heap::AllocFixedTable(size_t size) {
-  return CALL_HEAP_IMPL(AllocFixedTable, size);
+FixedDictionary *Heap::AllocFixedDictionary(size_t size) {
+  return CALL_HEAP_IMPL(AllocFixedDictionary, size);
 }
 InstructionArray *Heap::AllocInstructionArray(size_t length) {
   return CALL_HEAP_IMPL(AllocInstructionArray, length);
 }
-// Object *Heap::NullValue() { return CALL_HEAP_IMPL(NullValue); }
-Object *Heap::TrueValue() { return CALL_HEAP_IMPL(TrueValue); }
-Object *Heap::FalseValue() { return CALL_HEAP_IMPL(FalseValue); }
-Exception *Heap::AllocException(String *type, String *info, Object *data) {
-  return CALL_HEAP_IMPL(AllocExpection, type, info, data);
+VarInfoArray *Heap::AllocVarInfoArray(size_t length) {
+  return CALL_HEAP_IMPL(AllocVarInfoArray, length);
 }
-VarInfo *Heap::AllocVarInfo() { return CALL_HEAP_IMPL(AllocVarInfo); }
-TryCatchTable *Heap::AllocTryCatchTable() {
-  return CALL_HEAP_IMPL(AllocTryCatchTable);
-}
-ExternVarInfo *Heap::AllocExternVarInfo() {
-  return CALL_HEAP_IMPL(AllocExternVarInfo);
+ExternVarInfoArray *Heap::AllocExternVarInfoArray(size_t length) {
+  return CALL_HEAP_IMPL(AllocExternVarInfoArray, length);
 }
 SharedFunctionData *Heap::AllocSharedFunctionData() {
   return CALL_HEAP_IMPL(AllocSharedFunctionData);
@@ -311,9 +306,24 @@ ExternVar *Heap::AllocExternVar() { return CALL_HEAP_IMPL(AllocExternVar); }
 FunctionData *Heap::AllocFunctionData() {
   return CALL_HEAP_IMPL(AllocFunctionData);
 }
-NativeObject *Heap::AllocNativeObject(void *data,
-                                      const ObjectInterface *interface) {
-  return CALL_HEAP_IMPL(AllocNativeObject, data, interface);
+StackTraceData *Heap::AllocStackTraceData() {
+  return CALL_HEAP_IMPL(AllocStackTraceData);
+}
+Exception *Heap::AllocException() { return CALL_HEAP_IMPL(AllocException); }
+// NativeObject *Heap::AllocNativeObject(NativeObjectBase *obj,
+//                                      FreeMemoryFunction free_func) {
+//  return CALL_HEAP_IMPL(AllocNativeObject, obj, free_func);
+//}
+
+TableInfo *Heap::AllocTableInfo(FixedArray *prop_list) {
+  return CALL_HEAP_IMPL(AllocTableInfo, prop_list);
+}
+Table *Heap::AllocTable(TableInfo *info) {
+  return CALL_HEAP_IMPL(AllocTable, info);
+}
+NativeObject *Heap::AllocNativeObject(const NativeObjectInterface *interface,
+                                      void *data) {
+  return CALL_HEAP_IMPL(AllocNativeObject, interface, data);
 }
 uint64_t Heap::ObjectCount() { return CALL_HEAP_IMPL(ObjectCount); }
 void Heap::PrintHeap() { return CALL_HEAP_IMPL(PrintHeap); }
@@ -325,9 +335,9 @@ GCTracer::GCTracer(uint8_t color) : m_color(color) {}
 
 void GCTracer::Trace(HeapObject *p) {
   if (p == nullptr) return;
-  if (p->m_gctag == m_color) return;
-  p->m_gctag = m_color;
-  p->m_interface->trace_ref(p, this);
+  if (p->m_tag.gccolor() == m_color) return;
+  p->m_tag.set_gccolor(m_color);
+  p->trace_member(this);
 }
 void GCTracer::Trace(Object *p) {
   if (p == nullptr) return;

@@ -6,6 +6,7 @@ struct GlobalData;
 class HandleContainer;
 class Executer;
 class CompilingMemoryZone;
+class ExceptionTree;
 class Global {
  public:
   static void Init(GlobalData *data = nullptr);
@@ -15,6 +16,7 @@ class Global {
   static HandleContainer *GetHC();
   static CompilingMemoryZone *GetCMZ();
   static Executer *GetExecuter();
+  static ExceptionTree *GetExceptionTree();
   // static void SetHeap(Heap *h);
 };
 }  // namespace internal

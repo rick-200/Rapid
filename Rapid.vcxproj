@@ -149,6 +149,7 @@
     <ClCompile Include="compiler.cpp" />
     <ClCompile Include="console.cpp" />
     <ClCompile Include="engine.cpp" />
+    <ClCompile Include="exception_tree.cpp" />
     <ClCompile Include="executer.cpp" />
     <ClCompile Include="global.cpp" />
     <ClCompile Include="handle.cpp" />
@@ -158,11 +159,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="allocation.h" />
+    <ClInclude Include="api.h" />
     <ClInclude Include="ast.h" />
     <ClInclude Include="ast_visualizer.h" />
     <ClInclude Include="bytecode.h" />
     <ClInclude Include="config.h" />
-    <ClInclude Include="console.h" />
+    <ClInclude Include="exception_tree.h" />
+    <ClInclude Include="invasive_list.h" />
     <ClInclude Include="list.h" />
     <ClInclude Include="compiler.h" />
     <ClInclude Include="engine.h" />
@@ -172,14 +175,17 @@
     <ClInclude Include="handle.h" />
     <ClInclude Include="heap.h" />
     <ClInclude Include="debug.h" />
-    <ClInclude Include="native_module.h" />
+    <ClInclude Include="standerd_module.h" />
+    <ClInclude Include="native_object_interface.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="preprocessors.h" />
     <ClInclude Include="rapid.h" />
+    <ClInclude Include="std_object.h" />
     <ClInclude Include="stringbuilder.h" />
     <ClInclude Include="string_pool.h" />
     <ClInclude Include="type.h" />
     <ClInclude Include="util.h" />
+    <ClInclude Include="uuid.h" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="native_debug.natvis" />

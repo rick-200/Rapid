@@ -6,6 +6,7 @@
 #include "config.h"
 #include "factory.h"
 #include "list.h"
+#include "native_object_interface.h"
 #include "stringbuilder.h"
 namespace rapid {
 namespace internal {
@@ -13,7 +14,6 @@ typedef Object *Slot;
 struct CallInfo {
   bool is_script_call;  //从脚本代码执行的调用
   FunctionData *fd;
-  Object *this_object;
   Slot *base;  //栈底
   Slot *top;   // top指向栈顶元素（不是栈顶+1）
                //栈空间为[base,top]闭区间
@@ -25,16 +25,17 @@ Array *NewArray(size_t reserved) {
   Array *arr = Heap::AllocArray(reserved);  // TODO: 处理AllocArray失败的情况
   return arr;
 }
-Table *NewTable(size_t reserved) {
+Dictionary *NewDictionary(size_t reserved) {
   DEBUG_GC;
-  Table *tb = Heap::AllocTable(reserved);  // TODO: 处理AllocTable失败的情况
+  Dictionary *tb =
+      Heap::AllocDictionary(reserved);  // TODO: 处理AllocDictionary失败的情况
   return tb;
 }
-Exception *NewException(String *type, String *info, Object *data) {
-  DEBUG_GC;
-  Exception *e = Heap::AllocException(type, info, data);
-  return e;
-}
+// Exception *NewException(String *type, String *info, Object *data) {
+//  DEBUG_GC;
+//  Exception *e = Heap::AllocException(type, info, data);
+//  return e;
+//}
 String *NewString(const char *str) {
   DEBUG_GC;
   String *s = Heap::AllocString(str, strlen(str));
@@ -52,6 +53,88 @@ ExternVar *NewExternVar() {
   DEBUG_GC;
   ExternVar *ev = Heap::AllocExternVar();
   return ev;
+}
+Table *NewTable(TableInfo *ti, Object **vals) {
+  DEBUG_GC;
+  Table *t = Heap::AllocTable(ti);
+  for (size_t i = 0; i < ti->prop_count(); i++) t->set(i, vals[i]);
+  return t;
+}
+
+Object *GetProperty(Object *obj, String *name) {
+  if (!obj->IsHeapObject()) {
+    return value_failure_normal;
+  }
+  switch (HeapObject::cast(obj)->type()) {
+    case HeapObjectType::String: {
+      if (String::Equal(name, "length")) {
+        return Integer::FromInt64(String::cast(obj)->length());
+      }
+      return value_failure_normal;
+    }
+    case HeapObjectType::Array: {
+      if (String::Equal(name, "length")) {
+        return Integer::FromInt64(Array::cast(obj)->length());
+      }
+      return value_failure_normal;
+    }
+    case HeapObjectType::Dictionary: {
+      return value_failure_normal;
+    }
+    case HeapObjectType::Exception: {
+      if (String::Equal(name, "id")) {
+        return Integer::FromInt64(Exception::cast(obj)->id);
+      } else if (String::Equal(name, "type")) {
+        HandleScope hs;
+        return *ExceptionTree::GetType(Exception::cast(obj)->id);
+      } else if (String::Equal(name, "info")) {
+        return Exception::cast(obj)->info;
+      }
+      return value_failure_normal;
+    }
+    case HeapObjectType::Table: {
+      size_t idx = Table::cast(obj)->table_info()->get_index(name);
+      if (idx == TableInfo::invalid_index) return value_failure_normal;
+      return Table::cast(obj)->get(idx);
+    }
+    case HeapObjectType::NativeObject: {
+      return NativeObject::cast(obj)->interface()->get_prop(
+          NativeObject::cast(obj)->data(), name);
+    }
+    default:
+      return value_failure_normal;
+  }
+}
+Object *SetProperty(Object *obj, String *name, Object *value) {
+  if (!obj->IsHeapObject()) {
+    return value_failure_normal;
+  }
+  switch (HeapObject::cast(obj)->type()) {
+    case HeapObjectType::String: {
+      return value_failure_normal;
+    }
+    case HeapObjectType::Array: {
+      return value_failure_normal;
+    }
+    case HeapObjectType::Dictionary: {
+      return value_failure_normal;
+    }
+    case HeapObjectType::Exception: {
+      return value_failure_normal;
+    }
+    case HeapObjectType::Table: {
+      size_t idx = Table::cast(obj)->table_info()->get_index(name);
+      if (idx == TableInfo::invalid_index) return value_failure_normal;
+      Table::cast(obj)->set(idx, value);
+      return nullptr;
+    }
+    case HeapObjectType::NativeObject: {
+      return NativeObject::cast(obj)->interface()->set_prop(
+          NativeObject::cast(obj)->data(), name, value);
+    }
+    default:
+      return value_failure_normal;
+  }
 }
 
 #define I(_obj) (Integer::cast(_obj)->value())
@@ -164,37 +247,37 @@ inline Object *BNot(Object *a) {
 
 inline Object *And(Object *a, Object *b) {
   if (!a->IsBool() || !b->IsBool()) {
-    return Failure::Exception; /*TODO*/
+    return value_failure_exception; /*TODO*/
   }
-  return (a->IsTrue() && b->IsTrue()) ? Heap::TrueValue() : Heap::FalseValue();
+  return (a->IsTrue() && b->IsTrue()) ? value_true : value_false;
 }
 inline Object *Or(Object *a, Object *b) {
   if (!a->IsBool() || !b->IsBool()) {
-    return Failure::Exception; /*TODO*/
+    return value_failure_exception; /*TODO*/
   }
-  return (a->IsTrue() || b->IsTrue()) ? Heap::TrueValue() : Heap::FalseValue();
+  return (a->IsTrue() || b->IsTrue()) ? value_true : value_false;
 }
 inline Object *Not(Object *a) {
   if (!a->IsBool()) {
-    return Failure::Exception; /*TODO*/
+    return value_failure_exception; /*TODO*/
   }
-  return (a->IsFalse()) ? Heap::TrueValue() : Heap::FalseValue();
+  return (a->IsFalse()) ? value_true : value_false;
 }
-#define DEF_CMP_OP(_name, _op)                                         \
-  inline Object *_name(Object *a, Object *b) {                         \
-    if (a->IsInteger()) {                                              \
-      if (!b->IsInteger()) {                                           \
-        return Failure::Exception; /*TODO*/                            \
-      }                                                                \
-      return (I(a) _op I(b)) ? Heap::TrueValue() : Heap::FalseValue(); \
-    } else if (a->IsFloat()) {                                         \
-      if (!b->IsFloat()) {                                             \
-        return Failure::Exception; /*TODO*/                            \
-      }                                                                \
-      return (F(a) _op F(b)) ? Heap::TrueValue() : Heap::FalseValue(); \
-    } else {                                                           \
-      return Failure::Exception; /*TODO*/                              \
-    }                                                                  \
+#define DEF_CMP_OP(_name, _op)                           \
+  inline Object *_name(Object *a, Object *b) {           \
+    if (a->IsInteger()) {                                \
+      if (!b->IsInteger()) {                             \
+        return value_failure_exception; /*TODO*/         \
+      }                                                  \
+      return (I(a) _op I(b)) ? value_true : value_false; \
+    } else if (a->IsFloat()) {                           \
+      if (!b->IsFloat()) {                               \
+        return value_failure_exception; /*TODO*/         \
+      }                                                  \
+      return (F(a) _op F(b)) ? value_true : value_false; \
+    } else {                                             \
+      return value_failure_exception; /*TODO*/           \
+    }                                                    \
   }
 DEF_CMP_OP(Less, <);
 DEF_CMP_OP(LessEq, <=);
@@ -209,7 +292,7 @@ DEF_CMP_OP(NotEqual, !=);
 
 class ExecuterImpl : public Executer {
   List<CallInfo> list_ci;
-  Table *m_module;
+  Dictionary *m_module;
   Exception *err;
 #if (DEBUG_LOG_EXEC_INFO)
   FILE *dbg_f;
@@ -249,8 +332,7 @@ class ExecuterImpl : public Executer {
 
     return m_stack.p + ret_offset;
   }
-  void prepare_call(Slot *new_base, size_t param_cnt, Object *this_obj,
-                    FunctionData *fd) {
+  void prepare_call(Slot *new_base, size_t param_cnt, FunctionData *fd) {
     ASSERT(fd->shared_data->param_cnt == param_cnt);  //参数必须匹配
 
     new_base = reserve_stack(new_base, fd->shared_data->max_stack);
@@ -262,7 +344,6 @@ class ExecuterImpl : public Executer {
     new_ci.top = new_base + fd->shared_data->param_cnt -
                  1; /*top为栈顶位置，栈长(top-base+1)，应减去1*/
     new_ci.pc = fd->shared_data->instructions->begin();
-    new_ci.this_object = this_obj;
     list_ci.push(new_ci);
   }
 #if (DEBUG_LOG_EXEC_INFO)
@@ -325,14 +406,15 @@ class ExecuterImpl : public Executer {
 
   //执行最顶上的CallInfo，直到CallType为NativeCall
   void Execute() {
+    Exception *exception = nullptr;
   l_begin:
+    CallInfo *ci = &list_ci.back();
+    if (!ci->is_script_call) return;
 
 #if (DEBUG_LOG_EXEC_INFO)
     dbg_print_stack();
 #endif
 
-    CallInfo *ci = &list_ci.back();
-    if (!ci->is_script_call) return;
     byte *&pc = ci->pc;  //指针的引用，以便修改时同步到CallInfo中
     // top指向栈顶元素（不是栈顶+1）
     // top还用于标识gc范围，应在每条指令结束后再调整top指针
@@ -374,9 +456,9 @@ class ExecuterImpl : public Executer {
           *++top = *extern_var[*(uint16_t *)pc]->value_ref;
           pc += 2;
           break;
-        case Opcode::LOAD_THIS:
-          *++top = ci->this_object;
-          break;
+        // case Opcode::LOAD_THIS:
+        //  *++top = ci->this_object;
+        //  break;
         case Opcode::COPY:
           top[1] = top[0];
           ++top;
@@ -416,19 +498,29 @@ class ExecuterImpl : public Executer {
           top[1] = NewArray(0);
           ++top;
           break;
-        case Opcode::MAKE_TABLE: {
+        case Opcode::MAKE_DICTIONARY: {
           uint16_t cnt = *(uint16_t *)pc;
           pc += 2;
-          Table *tb = NewTable(cnt);  //此函数可能触发GC，此之前top不能变
+          Dictionary *tb =
+              NewDictionary(cnt);  //此函数可能触发GC，此之前top不能变
           top -= cnt * 2 - 1;
           tb->quick_init(top, cnt);
           top[0] = tb;
           break;
         }
-        case Opcode::MAKE_TABLE_0:
-          top[1] = NewTable(4);
+        case Opcode::MAKE_DICTIONARY_0:
+          top[1] = NewDictionary(4);
           ++top;
           break;
+        case Opcode::MAKE_TABLE: {
+          TableInfo *ti = TableInfo::cast(
+              ci->fd->shared_data->tableinfo->get(*(uint16_t *)pc));
+          pc += 2;
+          *(top - ti->prop_count() + 1) =
+              NewTable(ti, top - ti->prop_count() + 1);
+          top = top - ti->prop_count() + 1;
+          break;
+        }
         case Opcode::ADD:
           EXEC_BINOP(Add);
           break;
@@ -495,27 +587,22 @@ class ExecuterImpl : public Executer {
           EXEC_BINOP(NotEqual)
           break;
 
-        case Opcode::GET_P:
-          top[-1] = top[-1]->GetProperty(String::cast(top[0]),
-                                         AccessSpecifier::Public);
+        case Opcode::GET_P:  // obj name
+          top[-1] = GetProperty(top[-1], String::cast(top[0]));
           --top;
           break;
-        case Opcode::SET_P:
-          top[-1]->SetProperty(String::cast(top[0]), top[-2],
-                               AccessSpecifier::Public);
+        case Opcode::SET_P:  // val obj name
+          SetProperty(top[-1], String::cast(top[0]), top[-2]);
           --top;
           break;
         case Opcode::GET_I: {
-          Parameters param(nullptr, top, 1);
-          top[-1] = top[-1]->InvokeMetaFunc(MetaFunctionID::GET_INDEX, param);
+          VERIFY(0);  // TODO:GET_I
           --top;
           break;
         }
 
         case Opcode::SET_I: {
-          Object *p[] = {top[0], top[-2]};
-          Parameters param(nullptr, p, 2);
-          top[-2] = top[-1]->InvokeMetaFunc(MetaFunctionID::SET_INDEX, param);
+          VERIFY(0);  // TODO:SET_I
           top -= 2;
           break;
         }
@@ -541,46 +628,23 @@ class ExecuterImpl : public Executer {
             pc += 2;
           }
           break;
-        case Opcode::CALL:         // func p1 p2 p3 [<- top]
-        case Opcode::THIS_CALL: {  // obj func_name p1 p2 p3 [<- top]
+        case Opcode::CALL: {  // func p1 p2 p3 [<- top]
           uint16_t cnt = *(uint16_t *)pc;
           pc += 2;
           ASSERT(ci == &list_ci.back());
-          Object *this_obj;
-          Object *func;
-          if (op == Opcode::CALL) {
-            this_obj = nullptr;
-            func = *(top - cnt);
+          Object *func = *(top - cnt);
+          if (func->IsFunctionData()) {
+            FunctionData *fd = FunctionData::cast(func);
+            prepare_call(top - cnt + 1, cnt, fd);
             top -= cnt;  //此时top指向要调用的对象，同时此位置也接受返回值
-          } else {  // op == Opcode::THIS_CALL
-            ASSERT(op == Opcode::THIS_CALL);
-            this_obj = *(top - cnt - 1);
-            String *name = String::cast(*(top - cnt));
-            VERIFY(this_obj->IsHeapObject());  // TODO:throw
-            if (true) {
-              Parameters param(this_obj, top - cnt + 1, cnt);
-              //先不改变top，以免参数被gc回收
-
-              Object *ret = this_obj->InvokeMemberFunc(name, param);
-
-              top -= cnt + 1;
-              top[0] = ret;
-              break;
-            } else {  // TODO: CustomObject的THIS_CALL
-              ASSERT(0);
-              top -= cnt + 1;  //此时top指向要调用的对象，同时此位置也接受返回值
-            }
-          }
-
-          if (top[0]->IsFunctionData()) {
-            FunctionData *fd = FunctionData::cast(top[0]);
-            prepare_call(top + 1, cnt, this_obj, fd);
             goto l_begin;
-          } else if (top[0]->IsNativeFunction()) {
-            Parameters param(this_obj, top + 1, cnt);
-            top[0] = NativeFunction::cast(top[0])->call(param);
-          } else {
-            VERIFY(0);  // TODO
+          } else if (func->IsNativeObject()) {
+            HandleScope hs;
+            Parameters params(top - cnt + 1, cnt);
+            Object *ret = NativeObject::cast(func)->interface()->invoke(
+                NativeObject::cast(func)->data(), params);
+            top -= cnt;  //此时top指向要调用的对象，同时此位置也接受返回值
+            *top = ret;
           }
           break;
         }
@@ -602,10 +666,9 @@ class ExecuterImpl : public Executer {
           pc += 2;
           *++top = fd;
           for (size_t i = 0; i < fd->shared_data->extvars->length(); i++) {
-            ExternVarInfo *evi =
-                ExternVarInfo::cast(fd->shared_data->extvars->get(i));
-            if (!evi->in_stack) {  //在此函数的外部变量数组中
-              fd->extvars->set(i, ci->fd->extvars->get(evi->pos));
+            const auto &evi = fd->shared_data->extvars->at(i);
+            if (!evi.in_stack) {  //在此函数的外部变量数组中
+              fd->extvars->set(i, ci->fd->extvars->get(evi.pos));
               continue;
             }
 
@@ -613,7 +676,7 @@ class ExecuterImpl : public Executer {
             //先在打开的外部变量链表中搜索
 
             ExternVar *p = ci->fd->open_extvar_head;
-            Object **stack_value_ref = base + evi->pos;
+            Object **stack_value_ref = base + evi.pos;
             while (p != nullptr && p->value_ref != stack_value_ref) {
               p = p->un.next;
             }
@@ -685,9 +748,14 @@ class ExecuterImpl : public Executer {
       dbg_print_stack();
 #endif
     }
+    goto l_ececute_exit;
+  l_exception:  //出现异常
+    VERIFY(0);
+
+  l_ececute_exit:;
   }
 
-  Object *CallFunction(FunctionData *fd, const RawParameters &param) {
+  Object *CallFunction(FunctionData *fd, const Parameters &param) {
     if (fd->shared_data->param_cnt != param.count()) {
       VERIFY(0);  // TODO;
     }
@@ -707,7 +775,7 @@ class ExecuterImpl : public Executer {
     list_ci.push(native_ci);
 
     ++base;
-    prepare_call(base, param.count(), param.get_this(), fd);
+    prepare_call(base, param.count(), fd);
     for (size_t i = 0; i < param.count(); i++) base[i] = param[i];
     Execute();
 
@@ -724,7 +792,7 @@ class ExecuterImpl : public Executer {
     p->m_stack.p = Allocate<Slot>(Config::InitialStackSlotCount);
     p->m_stack.size = Config::InitialStackSlotCount;
     new (&p->list_ci) List<CallInfo>();
-    p->m_module = Factory::NewTable().ptr();
+    p->m_module = Factory::NewDictionary().ptr();
     p->err = nullptr;
 #if (DEBUG_LOG_EXEC_INFO)
     p->dbg_f = fopen(DEBUG_LOG_DIRECTORY "exec_log.txt", "w");
@@ -738,6 +806,7 @@ class ExecuterImpl : public Executer {
  public:
   void TraceStack(GCTracer *gct) {
     gct->Trace(this->m_module);
+    gct->Trace(this->err);
     if (list_ci.empty()) return;
     for (const auto &ci : list_ci) {
       if (ci.is_script_call) gct->Trace(ci.fd);
@@ -746,14 +815,22 @@ class ExecuterImpl : public Executer {
       gct->Trace(*p);
     }
   }
-  // void CallRapidFunc(Handle<FunctionData> func, Handle<Object> *params,
-  //                   size_t param_cnt) {}
-  void ThrowException(Handle<Exception> e) {
+
+  void ThrowException(uint64_t id, Handle<String> info) {
+    HandleScope hs;
     if (err != nullptr) {
-      VERIFY(0);
+      fprintf(stderr,
+              "abort in ThrowException(): another exception throwed before "
+              "handling exception.\n");
+      fprintf(stderr, "this exception: <%s>'%s'",
+              ExceptionTree::GetType(id)->cstr(), info->cstr());
+      fprintf(stderr, "previous exception: <%s>'%s'",
+              ExceptionTree::GetType(err->id)->cstr(), err->info->cstr());
+      abort();
     }
-    err = *e;
+    err = *Factory::NewException(id, info, GetStackTrace());
   }
+
   Handle<Exception> GetException() { return Handle<Exception>(err); }
   bool HasException() { return err != nullptr; }
   Handle<Object> CallFunction(Handle<FunctionData> fd,
@@ -795,8 +872,8 @@ void Executer::Destory(Executer *p) { return ExecuterImpl::Destory(p); }
 void Executer::TraceStack(GCTracer *gct) {
   return CALL_EXECUTER_IMPL(TraceStack, gct);
 }
-void Executer::ThrowException(Handle<Exception> e) {
-  return CALL_EXECUTER_IMPL(ThrowException, e);
+void Executer::ThrowException(uint64_t id, Handle<String> info) {
+  return CALL_EXECUTER_IMPL(ThrowException, id, info);
 }
 Handle<Exception> Executer::GetException() {
   return CALL_EXECUTER_IMPL(GetException);

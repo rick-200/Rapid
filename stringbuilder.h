@@ -58,6 +58,12 @@ public:
     }
     return *this;
   }
+  template <typename... TArgs>
+  static Handle<String> Format(const char *fmt, const TArgs &...args) {
+    StringBuilder sb;
+    sb.AppendFormat(fmt, args...);
+    return sb.ToString();
+  }
 };
 
 } // namespace internal

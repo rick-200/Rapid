@@ -13,8 +13,10 @@ class Malloced {
 
 // malloc的简单封装，用于自动提供类型信息
 //分配cnt*sizeof(T)字节的内存
+//完全兼容malloc/free
 template <class T>
-__declspec(allocator) [[nodiscard]] T *Allocate(size_t cnt = 1) noexcept {
+__declspec(allocator)
+    [[nodiscard]] inline T *Allocate(size_t cnt = 1) noexcept {
   void *p = malloc(sizeof(T) * cnt);
   if (p == nullptr) {
     abort();
@@ -23,14 +25,17 @@ __declspec(allocator) [[nodiscard]] T *Allocate(size_t cnt = 1) noexcept {
 }
 // malloc的简单封装，用于自动提供类型信息
 //分配size字节的内存
+//完全兼容malloc/free
 template <class T>
-__declspec(allocator) [[nodiscard]] T *AllocateSize(size_t size) noexcept {
+__declspec(allocator)
+    [[nodiscard]] inline T *AllocateSize(size_t size) noexcept {
   void *p = malloc(size);
   if (p == nullptr) {
     abort();
   }
   return reinterpret_cast<T *>(p);
 }
+inline void Free(void *p) { free(p); }
 
 }  // namespace internal
 }  // namespace rapid

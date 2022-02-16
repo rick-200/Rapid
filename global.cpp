@@ -1,11 +1,13 @@
 #include "global.h"
 
+#include <malloc.h>
+
 #include "ast.h"
+#include "exception_tree.h"
 #include "executer.h"
 #include "handle.h"
 #include "heap.h"
 #include "preprocessors.h"
-#include <malloc.h>
 namespace rapid {
 namespace internal {
 struct GlobalData {
@@ -14,6 +16,7 @@ struct GlobalData {
   HandleContainer *hsc;
   CompilingMemoryZone *cmz;
   Executer *exec;
+  ExceptionTree *et;
 };
 static thread_local GlobalData *global_data;
 void Global::Init(GlobalData *data) {
@@ -28,6 +31,7 @@ void Global::Init(GlobalData *data) {
   global_data->heap = Heap::Create();
   global_data->hsc = HandleContainer::Create();
   HandleScope hs;
+  global_data->et = ExceptionTree::Create();
   global_data->cmz = CompilingMemoryZone::Create();
   global_data->exec = Executer::Create();
   Heap::EnableGC();
@@ -50,7 +54,9 @@ CompilingMemoryZone *Global::GetCMZ() { return global_data->cmz; }
 
 Executer *Global::GetExecuter() { return global_data->exec; }
 
+ExceptionTree *Global::GetExceptionTree() { return global_data->et; }
+
 // void Global::SetHeap(Heap* h) { global_data->heap = h; }
 
-} // namespace internal
-} // namespace rapid
+}  // namespace internal
+}  // namespace rapid

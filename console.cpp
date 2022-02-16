@@ -1,11 +1,13 @@
-#include "console.h"
+#include "standerd_module.h"
 
 #include "executer.h"
 #include "factory.h"
+#include "native_object_interface.h"
+#include "uuid.h"
 namespace rapid {
 namespace internal {
 namespace stdmodule {
-void print_one(Object* obj, bool first = false) {
+static void print_one(Object* obj, bool first = false) {
   if (obj->IsNull()) {
     printf("null");
   } else if (obj->IsBool()) {
@@ -30,9 +32,9 @@ void print_one(Object* obj, bool first = false) {
     printf(end == Array::cast(obj)->end() ? "]" : ", ...]");
   } else if (obj->IsFixedArray()) {
     ASSERT(0);  // FixedArray不应从脚本中访问
-  } else if (obj->IsTable()) {
-    Table* tb = Table::cast(obj);
-    TableIterator it = tb->get_iterator();
+  } else if (obj->IsDictionary()) {
+    Dictionary* tb = Dictionary::cast(obj);
+    DictionaryIterator it = tb->get_iterator();
     printf("{");
     int cnt = 0;
     while (!it.is_end()) {
@@ -49,7 +51,7 @@ void print_one(Object* obj, bool first = false) {
       printf(", ");
     }
     printf("}");
-  } else if (obj->IsFixedTable()) {
+  } else if (obj->IsFixedDictionary()) {
     ASSERT(0);
   } else if (obj->IsFunctionData()) {
     printf("<funcdata>%p:%s@%p", FunctionData::cast(obj),
@@ -62,43 +64,31 @@ void print_one(Object* obj, bool first = false) {
     printf("<unknown object>");
   }
 }
-Object* print(const Parameters& params) {
-  HandleScope hs;
+static Object* print(const Parameters& params) {
   for (size_t i = 0; i < params.count(); i++) {
-    print_one(params[i].ptr(), true);
+    print_one(params[i], true);
     if (i != params.count() - 1) printf("    ");
   }
   printf("\n");
   return nullptr;
 }
-Object* console_get_property(Object* obj, String* name, AccessSpecifier spec) {
-  return Failure::PropertyNotFound;
-}
-Object* console_set_property(Object* obj, String* name, Object* val,
-                             AccessSpecifier spec) {
-  return Failure::PropertyNotFound;
-}
-Object* console_invoke_memberfunc(Object* obj, String* name,
-                                  const Parameters& params) {
-  if (String::Equal(name, "print")) {
-    return print(params);
+class Console {
+ public:
+  static constexpr UUID uuid = {0x17EF779BA88E032, 0x15902275E1A53FF7};
+  static Object* get_property(void* data, String* name) {
+    HandleScope hs;
+    if (String::Equal(name, CStringWrap("print"))) {
+      return *NewNativeFunction(print);
+    } else {
+      return value_failure_normal;
+    }
   }
-  return nullptr;
-}
-Object* console_invoke_metafunc(Object* obj, MetaFunctionID id,
-                                const Parameters& params) {
-  return Failure::NotImplemented;
-}
-void console_trace_ref(Object* obj, GCTracer*) {}
-
-constexpr ObjectInterface console_interface = {
-    console_get_property, console_set_property, console_invoke_memberfunc,
-    console_invoke_metafunc, console_trace_ref};
-
+  static constexpr NativeObjectInterface interface = {
+      uuid, get_property, nullptr, nullptr, nullptr,
+  };
+};
 Handle<Object> GetConsoleModule() {
-  Handle<NativeObject> x =
-      Factory::NewNativeObject(nullptr, &console_interface);
-  return x;
+  return Factory::NewNativeObject(&Console::interface, nullptr);
 }
 }  // namespace stdmodule
 }  // namespace internal

@@ -241,7 +241,6 @@ class VisualizerVisitor : public ASTVisitor {
     }
     ret = call;
   }
-  virtual void VisitThisExpr(ThisExpr *node) { DefNode("this"); }
   virtual void VisitParamsExpr(ParamsExpr *node) { DefNode("params"); }
   virtual void VisitImportExpr(ImportExpr *node) { DefNode("import"); }
   virtual void VisitArrayExpr(ArrayExpr *p) {
@@ -252,6 +251,18 @@ class VisualizerVisitor : public ASTVisitor {
       Connect(mk_a, ret);
     }
     ret = mk_a;
+  }
+  virtual void VisitDictionaryExpr(DictionaryExpr *p) {
+    DefNode("mk_dict");
+    int mk_t = ret;
+    for (size_t i = 0; i < p->params.size(); i++) {
+      DefNode(p->params[i].key);
+      Connect(mk_t, ret);
+      int k = ret;
+      Visit(p->params[i].value);
+      Connect(k, ret);
+    }
+    ret = mk_t;
   }
   virtual void VisitTableExpr(TableExpr *p) {
     DefNode("mk_table");
@@ -314,17 +325,15 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
     intptr_t siz = read_bytecode(pc, buff);
     sb.AppendFormat("    %-4lld | %-4d: %s\n",
                     Integer::cast(sfd->bytecode_line->get(cmd_cnt))->value(),
-                    pc - sfd->instructions->begin(),
-                    buff);
+                    pc - sfd->instructions->begin(), buff);
     cmd_cnt++;
     pc += siz;
     // sb.AppendString("\n");
   }
   sb.AppendFormat("  locals(%llu):\n", sfd->vars->length());
   for (size_t i = 0; i < sfd->vars->length(); i++) {
-    sb.AppendFormat("    %llu %s:%d\n", i,
-                    VarInfo::cast(sfd->vars->get(i))->name->cstr(),
-                    VarInfo::cast(sfd->vars->get(i))->slot_id);
+    sb.AppendFormat("    %llu %s:%d\n", i, sfd->vars->at(i).name->cstr(),
+                    sfd->vars->at(i).slot_id);
   }
   sb.AppendFormat("  consts(%llu):\n", sfd->kpool->length());
   for (size_t i = 0; i < sfd->kpool->length(); i++) {
@@ -333,12 +342,11 @@ inline Handle<String> VisualizeByteCode(Handle<SharedFunctionData> sfd) {
   }
   sb.AppendFormat("  extern vars(%llu):\n", sfd->extvars->length());
   for (size_t i = 0; i < sfd->extvars->length(); i++) {
-    sb.AppendFormat(
-        "    %llu %s:%s:%d\n", i,
-        ExternVarInfo::cast(sfd->extvars->get(i))->name->cstr(),
-        ExternVarInfo::cast(sfd->extvars->get(i))->in_stack ? "true" : "false",
-        ExternVarInfo::cast(sfd->extvars->get(i))->pos);
+    sb.AppendFormat("    %llu %s:%s:%d\n", i, sfd->extvars->at(i).name->cstr(),
+                    sfd->extvars->at(i).in_stack ? "true" : "false",
+                    sfd->extvars->at(i).pos);
   }
+  sb.AppendFormat("  tableinfos(%llu):\n", sfd->tableinfo->length());
   sb.AppendFormat("  inner func(%llu):\n", sfd->inner_func->length());
   for (size_t i = 0; i < sfd->inner_func->length(); i++) {
     sb.AppendFormat(

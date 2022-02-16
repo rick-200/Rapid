@@ -1,11 +1,12 @@
 var console = import("console");
-func f(){}
-var x = 0;
-for range(var i:10){
-    f();
-}
-console.print(x);
-
+console.print(123);
+var x={
+a:"aaaa",
+b:4.5
+};
+x.b+=1;
+console.print(x.a);
+console.print(x.b);
 /*
 var console = import("console");
 

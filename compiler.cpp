@@ -2,7 +2,6 @@
 namespace rapid {
 namespace internal {
 
-
 struct __char_check_t {
   static constexpr uint8_t Alphabet = 1;
   static constexpr uint8_t Number = 2;
@@ -32,13 +31,11 @@ inline bool is_allowed_symbol_suffix(char c) {
 }
 template <size_t LEN>
 constexpr bool whole_string_nequal(const char *ps, const char (&pkw)[LEN]) {
-  if (is_allowed_symbol_suffix(ps[LEN-1])) return false;
+  if (is_allowed_symbol_suffix(ps[LEN - 1])) return false;
   for (size_t i = 0; i < LEN - 1; i++)
     if (ps[i] != pkw[i]) return false;
   return true;
 }
-
-
 
 void TokenStream::Step(int step) {
   for (int i = 0; i < step; i++) {
@@ -133,11 +130,11 @@ void TokenStream::ReadTokenString() {
               Step(2);
               goto l_beginstr;
             }
-            VERIFY(0);// TODO：抛出错误，string中的非法字符
+            VERIFY(0);  // TODO：抛出错误，string中的非法字符
             break;
           }
           default:
-            VERIFY(0);// TODO：抛出错误，string中无法识别的转义字符
+            VERIFY(0);  // TODO：抛出错误，string中无法识别的转义字符
         }
         break;
       }
@@ -438,7 +435,7 @@ l_begin_switch:
     case 'n':
       if (whole_string_nequal(ps, "null")) {
         InitToken(TokenType::KVAL);
-        t.v = Factory::NullValue();
+        t.v = Handle<Object>();
         Step(4);
       } else {
         ReadTokenSymbol();
@@ -498,13 +495,13 @@ l_begin_switch:
       ReadTokenSymbol();
       break;
     default:
-      VERIFY(0);//TODO: 抛出错误，非法字符
+      VERIFY(0);  // TODO: 抛出错误，非法字符
       break;
   }
 }
 
 TokenStream::TokenStream(const char *s)
-    : ps(s), row(1), col(1), t({TokenType::END, 0, 0, Factory::NullValue()}) {
+    : ps(s), row(1), col(1), t({TokenType::END, 0, 0, Handle<Object>()}) {
   ReadToken();
 }
 
@@ -515,7 +512,7 @@ void TokenStream::consume() { ReadToken(); }
 //-----------------------------------------------------------------------
 
 void CodeGenerator::Visit(AstNode *node) {
-  size_t line_save = current_line;
+  auto line_save = current_line;
   current_line = node->row;
   ASTVisitor::Visit(node);
   current_line = line_save;
@@ -544,7 +541,7 @@ void CodeGenerator::VisitBlockStat(BlockStat *p) {
   for (auto node : p->stat) {
     Visit(node);
     if (node->type == AstNodeType::ReturnStat) {
-      LeaveScope(false);//无需清理，RET指令会做清理工作
+      LeaveScope(false);  //无需清理，RET指令会做清理工作
       return;
     }
   }
@@ -631,13 +628,16 @@ void CodeGenerator::VisitFuncDecl(FuncDecl *p) {
     fc->var.push(vc);
     fc->allvar.push(vc);
   }
+  if (ctx->inner_func.size() >= invalid_pos) {
+    error_inner_function_limit_exceeded();
+  }
   uint16_t fdp = ctx->inner_func.size();
   ctx->inner_func.push(fc);
   FunctionCtx *upper = ctx;
   ctx = fc;
   Visit(p->body);
   if (ctx->cmd.size() == 0 || (ctx->cmd.back() != (uint8_t)Opcode::RET &&
-                               ctx->cmd.back() != (uint8_t)Opcode::RETNULL )) {
+                               ctx->cmd.back() != (uint8_t)Opcode::RETNULL)) {
     AppendOp(Opcode::RETNULL);
   }
   ctx = upper;
@@ -838,20 +838,12 @@ void CodeGenerator::VisitAssignExpr(AssignExpr *p) {
 }
 
 void CodeGenerator::VisitCallExpr(CallExpr *p) {
-  if (p->callee->type == AstNodeType::ImportExpr) {  
+  if (p->callee->type == AstNodeType::ImportExpr) {
     if (p->params.size() != 1) {
       error_illegal_use(p->row, p->col, "import");
     }
     Visit(p->params[0]);
     AppendOp(Opcode::IMPORT);
-  } else if (p->callee->type ==
-             AstNodeType::MemberExpr) {  //对成员函数的调用，生成THIS_CALL
-    Visit(((MemberExpr *)p->callee)->target);
-    LoadK(((MemberExpr *)p->callee)->name);
-    for (auto node : p->params) {
-      Visit(node);
-    }
-    ThisCall((uint16_t)p->params.size());
   } else {
     Visit(p->callee);
     for (auto node : p->params) {
@@ -941,10 +933,10 @@ void CodeGenerator::VisitAssignExpr(AssignExpr *p, bool from_expr_stat) {
   }
 }
 
-void CodeGenerator::VisitThisExpr(ThisExpr *p) {
-  AppendOp(Opcode::LOAD_THIS);
-  push();
-}
+// void CodeGenerator::VisitThisExpr(ThisExpr *p) {
+//  //AppendOp(Opcode::LOAD_THIS);
+//  //push();
+//}
 
 void CodeGenerator::VisitParamsExpr(ParamsExpr *p) {
   AppendOp(Opcode::LOAD_PARAMS);
@@ -969,16 +961,16 @@ void CodeGenerator::VisitArrayExpr(ArrayExpr *p) {
   }
 }
 
-void CodeGenerator::VisitTableExpr(TableExpr *p) {
+void CodeGenerator::VisitDictionaryExpr(DictionaryExpr *p) {
   if (p->params.size() == 0) {
-    AppendOp(Opcode::MAKE_TABLE_0);
+    AppendOp(Opcode::MAKE_DICTIONARY_0);
     push();
   } else {
     for (size_t i = 0; i < p->params.size(); i++) {
       LoadK(p->params[i].key);
       Visit(p->params[i].value);
     }
-    AppendOp(Opcode::MAKE_TABLE);
+    AppendOp(Opcode::MAKE_DICTIONARY);
     AppendU16((uint16_t)p->params.size());
     pop(p->params.size() * 2 - 1);
   }
@@ -1002,7 +994,7 @@ void CodeGenerator::VisitForRangeStat(ForRangeStat *p) {
   } else {
     LoadK(Factory::NewInteger(0));
   }
-  AddVar(p->loop_var_name);//i=begin
+  AddVar(p->loop_var_name);  // i=begin
   ASSERT(p->end != nullptr);
   Visit(p->end);
   AddVar(Factory::NewString("(range end)"));
@@ -1020,7 +1012,6 @@ void CodeGenerator::VisitForRangeStat(ForRangeStat *p) {
   Codepos for_range_after_end = CurrentPos();
   LeaveScope();
 
-
   loop_ctx = upper;  //恢复
   for (auto pos : current->break_pos) {
     ApplyJump(pos, for_range_after_end);
@@ -1028,6 +1019,27 @@ void CodeGenerator::VisitForRangeStat(ForRangeStat *p) {
   for (auto pos : current->continue_pos) {
     ApplyJump(pos, for_range_end);
   }
+}
+
+void CodeGenerator::VisitTableExpr(TableExpr *p) {
+  if (ctx->tableinfo.size() == invalid_pos) {
+    error_table_limit_exceeded();
+  }
+  uint16_t tip = static_cast<uint16_t>(ctx->tableinfo.size());
+  Handle<FixedArray> item_list = Factory::NewFixedArray(p->params.size());
+  for (size_t i = 0; i < p->params.size(); i++) {
+    item_list->set(i, *p->params[i].key);
+  }
+  Handle<TableInfo> ti = Factory::NewTableInfo(item_list);
+  ctx->tableinfo.push(ti);
+
+  for (size_t i = 0; i < p->params.size(); i++) {
+    Visit(p->params[i].value);  //各属性的值依次入栈
+  }
+
+  AppendOp(Opcode::MAKE_TABLE);
+  AppendU16(tip);
+  pop(p->params.size() - 1);
 }
 
 }  // namespace internal

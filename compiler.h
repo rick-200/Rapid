@@ -27,6 +27,7 @@ unop = ...
 #include "allocation.h"
 #include "ast.h"
 #include "bytecode.h"
+#include "exception_tree.h"
 #include "executer.h"
 #include "factory.h"
 #include "list.h"
@@ -64,6 +65,14 @@ inline bool basic_obj_equal(Object *a, Object *b) {
     return b->IsString() && String::Equal(String::cast(a), String::cast(b));
   } else if (a->IsBool()) {
     return b->IsBool() && a->IsTrue() == b->IsTrue();
+  } else if (a->IsFixedArray()) {
+    if (!b->IsFixedArray()) return false;
+    FixedArray *fa = FixedArray::cast(a), *fb = FixedArray::cast(b);
+    if (fa->length() != fb->length()) return false;
+    for (size_t i = 0; i < fa->length(); i++) {
+      if (!basic_obj_equal(fa->get(i), fb->get(i))) return false;
+    }
+    return true;
   } else {
     ASSERT(0);
   }
@@ -93,6 +102,7 @@ class BinopParserParam {
 
 // constexpr BinopParserParam bpp = {TokenType::ADD};
 class Parser {
+  Handle<String> filename;
   TokenStream *m_ts;
   bool has_error;
 
@@ -117,26 +127,24 @@ class Parser {
         ASSERT(0);
     }
   }
-  void syntax_error(int row, int col, Handle<String> info) {
-    Handle<Exception> e =
-        Factory::NewException(Factory::NewString("syntax_error"), info);
-    Executer::ThrowException(e);
+  void syntax_error(Handle<String> info) {
+    Executer::ThrowException(ExceptionTree::ID_SYNTAX_ERROR, info);
     has_error = true;
   }
   template <class... TArgs>
   void syntax_error_format(int row, int col, const char *fmt,
                            const TArgs &...args) {
     StringBuilder sb;
-    sb.AppendFormat("syntax_error(%d,%d): ", row, col);
+    sb.AppendFormat("%s(%d,%d): ", filename->cstr(), row, col);
     sb.AppendFormat(fmt, args...);
-    syntax_error(row, col, sb.ToString());
+    syntax_error(sb.ToString());
   }
   void syntax_error(int row, int col, TokenType now, TokenType need) {
     StringBuilder sb;
     const char *now_s = tokentype_tostr(now);
     ASSERT(now_s);
     const char *need_s = tokentype_tostr(need);
-    sb.AppendFormat("syntax_error(%d,%d):", row, col);
+    sb.AppendFormat("%s(%d,%d):", filename->cstr(), row, col);
     if (now_s != nullptr) {
       sb.AppendFormat(" unexpected token<%s>", now_s);
     }
@@ -144,7 +152,7 @@ class Parser {
       if (now_s != nullptr) sb.AppendChar(',');
       sb.AppendFormat(" token<%s> needed", need_s);
     }
-    return syntax_error(row, col, sb.ToString());
+    return syntax_error(sb.ToString());
   }
   void unexpected(TokenType need = TokenType::NUL) {
     syntax_error(m_ts->peek().row, m_ts->peek().col, m_ts->peek().t, need);
@@ -243,26 +251,47 @@ class Parser {
       }
       case TokenType::BK_LL: {  //{
         CONSUME;
-        TableExpr *te = AllocTableExpr(ALLOC_PARAM);
-        if (TK.t == TokenType::BK_LR) {
+        if (TK.t == TokenType::BK_LR) {  //空{}，为创建空字典
           CONSUME;
-          return te;
+          return AllocDictionaryExpr(ALLOC_PARAM);
         }
+        bool is_table_creation;
+        if (TK.t == TokenType::KVAL &&
+            TK.v->IsString()) {  //字符串字面值，解析为创建字典
+          is_table_creation = false;
+        } else if (TK.t == TokenType::SYMBOL) {  //符号，解析为创建表
+          is_table_creation = true;
+        } else {
+          syntax_error_format(TK.row, TK.col,
+                              "unexpected token %s, "
+                              "need string literal for dictionary creation "
+                              "or symbol for table creation.",
+                              tokentype_tostr(TK.t));
+          return nullptr;
+        }
+        ZoneList<StrKeyExpValuePair> list;
         while (true) {
-          TableParamPair tp;
-          if (TK.t != TokenType::SYMBOL &&
-              (TK.t != TokenType::KVAL || !TK.v->IsString())) {
-            syntax_error_format(
-                TK.row, TK.col,
-                "need symbol or string literial in table construction.");
-            return nullptr;
+          if (is_table_creation) {
+            if (TK.t != TokenType::SYMBOL) {
+              syntax_error_format(TK.row, TK.col,
+                                  "need symbol in table construction.");
+              return nullptr;
+            }
+          } else {
+            if (TK.t != TokenType::KVAL || !TK.v->IsString()) {
+              syntax_error_format(
+                  TK.row, TK.col,
+                  "need string literial in dictionary construction.");
+              return nullptr;
+            }
           }
+          StrKeyExpValuePair tp;
           tp.key = Handle<String>::cast(TK.v);
           CONSUME;
           REQUIRE(TokenType::COLON);
           tp.value = ParseExpression();
           CHECK_OK(tp.value);
-          te->params.push(tp);
+          list.push(tp);
           if (TK.t == TokenType::COMMA) {
             CONSUME;
           }
@@ -271,7 +300,15 @@ class Parser {
             break;
           }
         }
-        return te;
+        if (is_table_creation) {
+          TableExpr *te = AllocTableExpr(ALLOC_PARAM);
+          te->params = std::move(list);
+          return te;
+        } else {
+          DictionaryExpr *de = AllocDictionaryExpr(ALLOC_PARAM);
+          de->params = std::move(list);
+          return de;
+        }
       }
     }
     syntax_error_format(TK.row, TK.col,
@@ -401,7 +438,7 @@ class Parser {
           sb.AppendFormat(
               "syntax_error(%d,%d): need assignable expression before '='.",
               TK.row, TK.col);
-          syntax_error(TK.row, TK.col, sb.ToString());
+          syntax_error(sb.ToString());
           return nullptr;
         }
         p->left = (AssignableExpr *)left;
@@ -664,7 +701,8 @@ class Parser {
   }
 
  public:
-  Parser() : m_ts(nullptr), has_error(false) {}
+  Parser(Handle<String> filename)
+      : m_ts(nullptr), has_error(false), filename(filename) {}
   FuncDecl *ParseModule(Handle<String> s) {
     m_ts = new TokenStream(s->cstr());
     FuncDecl *p = AllocFuncDecl(ALLOC_PARAM);
@@ -712,6 +750,7 @@ struct FunctionCtx {
   ZoneList<uint8_t> cmd;
   ZoneList<TryCatchCtx> try_catch;
   ZoneList<uint32_t> bytecode_line;  //每条字节码对应的代码行
+  ZoneList<Handle<TableInfo>> tableinfo;
   size_t top;
   size_t max_stack;
   size_t param_cnt;
@@ -798,33 +837,33 @@ class CodeGenerator : public ASTVisitor {
     sfd->instructions = *Factory::NewInstructionArray(ctx->cmd.size());
     memcpy(sfd->instructions->begin(), ctx->cmd.begin(),
            sizeof(Cmd) * ctx->cmd.size());
-    sfd->vars = *Factory::NewFixedArray(ctx->allvar.size());
+    sfd->vars = *Factory::NewVarInfoArray(ctx->allvar.size());
     for (size_t i = 0; i < ctx->allvar.size(); i++) {
-      Handle<VarInfo> vd = Factory::NewVarInfo();
-      vd->name = *ctx->allvar[i].name;
-      vd->slot_id = ctx->allvar[i].slot_id;
-      sfd->vars->set(i, *vd);
+      sfd->vars->at(i).name = *ctx->allvar[i].name;
+      sfd->vars->at(i).slot_id = ctx->allvar[i].slot_id;
     }
-    sfd->extvars = *Factory::NewFixedArray(ctx->extvar.size());
+    sfd->extvars = *Factory::NewExternVarInfoArray(ctx->extvar.size());
     for (size_t i = 0; i < ctx->extvar.size(); i++) {
-      Handle<ExternVarInfo> evi = Factory::NewExternVarInfo();
-      evi->name = *ctx->extvar[i].name;
-      evi->in_stack = ctx->extvar[i].in_stack;
-      evi->pos = ctx->extvar[i].pos;
-      sfd->extvars->set(i, *evi);
+      sfd->extvars->at(i).name = *ctx->extvar[i].name;
+      sfd->extvars->at(i).in_stack = ctx->extvar[i].in_stack;
+      sfd->extvars->at(i).pos = ctx->extvar[i].pos;
     }
 
     sfd->kpool = *Factory::NewFixedArray(ctx->kpool.size());
     for (size_t i = 0; i < ctx->kpool.size(); i++) {
       sfd->kpool->set(i, *ctx->kpool[i]);
     }
-    sfd->inner_func = *Factory::NewFixedArray(ctx->inner_func.size());
-    for (size_t i = 0; i < ctx->inner_func.size(); i++) {
-      sfd->inner_func->set(i, *Translate(ctx->inner_func[i]));
-    }
     sfd->bytecode_line = *Factory::NewFixedArray(ctx->bytecode_line.size());
     for (size_t i = 0; i < ctx->bytecode_line.size(); i++) {
       sfd->bytecode_line->set(i, Integer::FromInt64(ctx->bytecode_line[i]));
+    }
+    sfd->tableinfo = *Factory::NewFixedArray(ctx->tableinfo.size());
+    for (size_t i = 0; i < ctx->tableinfo.size(); i++) {
+      sfd->tableinfo->set(i, *ctx->tableinfo[i]);
+    }
+    sfd->inner_func = *Factory::NewFixedArray(ctx->inner_func.size());
+    for (size_t i = 0; i < ctx->inner_func.size(); i++) {
+      sfd->inner_func->set(i, *Translate(ctx->inner_func[i]));
     }
     return sfd;
   }
@@ -891,7 +930,7 @@ class CodeGenerator : public ASTVisitor {
     ++ctx->top;
     if (ctx->top > ctx->max_stack) ctx->max_stack = ctx->top;
   }
-  void pop(uint16_t size = 1) { ctx->top -= size; }
+  void pop(size_t size = 1) { ctx->top -= size; }
   void EnterScope() {
     ctx->var.push(VarCtx{Handle<String>(), invalid_pos, false});
   }
@@ -918,32 +957,57 @@ class CodeGenerator : public ASTVisitor {
       }
     }
   }
-  [[noreturn]] void error_symbol_notfound(int row, int col,
-                                          Handle<String> name) {
-    StringBuilder sb;
-    sb.AppendFormat("syntax_error(%d,%d): undeclared symbol '%s'", row, col,
-                    name->cstr());
-    Handle<Exception> e = Factory::NewException(
-        Factory::NewString("syntax_error"), sb.ToString());
-    Executer::ThrowException(e);
+  void syntax_error(Handle<String> info) {
+    Executer::ThrowException(ExceptionTree::ID_SYNTAX_ERROR, info);
     longjmp(*error_env, 1);
   }
-  [[noreturn]] void error_symbol_notfound(VarExpr *p) {
+  void error_symbol_notfound(int row, int col, Handle<String> name) {
+    syntax_error(StringBuilder::Format("%s:(%d,%d): undeclared symbol '%s'",
+                                       filename->cstr(), row, col,
+                                       name->cstr()));
+  }
+  void error_symbol_notfound(VarExpr *p) {
     error_symbol_notfound(p->row, p->col, p->name);
   }
-  [[noreturn]] void error_illegal_use(int row, int col, const char *name) {
-    StringBuilder sb;
-    sb.AppendFormat("syntax_error(%d,%d): Illegal use of '%s'", row, col, name);
-    Handle<Exception> e = Factory::NewException(
-        Factory::NewString("syntax_error"), sb.ToString());
-    Executer::ThrowException(e);
-    longjmp(*error_env, 1);
+  void error_illegal_use(int row, int col, const char *name) {
+    syntax_error(StringBuilder::Format("%s(%d,%d): undeclared symbol '%s'",
+                                       filename->cstr(), row, col, name));
+  }
+  void error_limit_exceeded(const char *funcname, const char *name,
+                            size_t limit) {
+    syntax_error(StringBuilder::Format(
+        "%s(in '%s'): %s amount limit exceeded. (Upper limit is "
+        "%llu)",
+        filename->cstr(), funcname, name, limit));
+  }
+  void error_variable_limit_exceeded(const char *funcname = nullptr) {
+    error_limit_exceeded(funcname == nullptr ? ctx->name->cstr() : funcname,
+                         "variable", 65534);
+  }
+  void error_extern_variable_limit_exceeded(const char *funcname = nullptr) {
+    error_limit_exceeded(funcname == nullptr ? ctx->name->cstr() : funcname,
+                         "extern variable", 65534);
+  }
+  void error_literal_limit_exceeded(const char *funcname = nullptr) {
+    error_limit_exceeded(funcname == nullptr ? ctx->name->cstr() : funcname,
+                         "extern variable", 65534);
+  }
+  void error_inner_function_limit_exceeded(const char *funcname = nullptr) {
+    error_limit_exceeded(funcname == nullptr ? ctx->name->cstr() : funcname,
+                         "inner function", 65534);
+  }
+  void error_table_limit_exceeded(const char *funcname = nullptr) {
+    error_limit_exceeded(funcname == nullptr ? ctx->name->cstr() : funcname,
+                         "table creation", 65534);
   }
   // 应先将初值push到栈上，再AddVar
   void AddVar(Handle<String> name) {
     VarCtx vc;
     vc.name = name;
-    vc.slot_id = ctx->top - 1;
+    if (ctx->top - 1 >= invalid_pos) {
+      error_variable_limit_exceeded();
+    }
+    vc.slot_id = static_cast<uint16_t>(ctx->top - 1);
     vc.is_externvar = false;
     ctx->var.push(vc);
     ctx->allvar.push(vc);
@@ -966,10 +1030,13 @@ class CodeGenerator : public ASTVisitor {
   uint16_t FindConst(Handle<Object> v) {
     for (size_t i = 0; i < ctx->kpool.size(); i++) {
       if (basic_obj_equal(*ctx->kpool[i], *v)) {
-        return (uint16_t)i;
+        return static_cast<uint16_t>(i);
       }
     }
-    uint16_t ret = (uint16_t)ctx->kpool.size();
+    if (ctx->kpool.size() >= invalid_pos) {
+      error_literal_limit_exceeded();
+    }
+    uint16_t ret = static_cast<uint16_t>(ctx->kpool.size());
     ctx->kpool.push(v);
     return ret;
   }
@@ -986,7 +1053,8 @@ class CodeGenerator : public ASTVisitor {
   }
   uint16_t FindExternVarFromCtx(FunctionCtx *cur_ctx, Handle<String> name) {
     for (size_t i = 0; i < cur_ctx->extvar.size(); i++) {
-      if (String::Equal(*cur_ctx->extvar[i].name, *name)) return i;
+      if (String::Equal(*cur_ctx->extvar[i].name, *name))
+        return static_cast<uint16_t>(i);
     }
     if (cur_ctx->outer_func == nullptr) return invalid_pos;
     uint16_t vp = FindVarFromCtx(cur_ctx->outer_func, name);
@@ -1003,7 +1071,10 @@ class CodeGenerator : public ASTVisitor {
       evc.pos = vp;
     }
     cur_ctx->extvar.push(evc);
-    return cur_ctx->extvar.size() - 1;
+    if (cur_ctx->extvar.size() - 1 >= invalid_pos) {
+      error_extern_variable_limit_exceeded();
+    }
+    return static_cast<uint16_t>(cur_ctx->extvar.size() - 1);
   }
   uint16_t FindExternVar(Handle<String> name) {
     return FindExternVarFromCtx(ctx, name);
@@ -1051,11 +1122,6 @@ class CodeGenerator : public ASTVisitor {
     AppendU16(param_cnt);
     pop(param_cnt);  //剩一个返回值
   }
-  void ThisCall(uint16_t param_cnt /*不包括被调用对象和成员函数名*/) {
-    AppendOp(Opcode::THIS_CALL);
-    AppendU16(param_cnt);
-    pop(param_cnt + 1);  //剩一个返回值
-  }
 
  private:
   virtual void Visit(AstNode *node) override;
@@ -1080,12 +1146,12 @@ class CodeGenerator : public ASTVisitor {
   virtual void VisitAssignExpr(AssignExpr *node) override;
   virtual void VisitCallExpr(CallExpr *node) override;
   void VisitAssignExpr(AssignExpr *p, bool from_expr_stat);
-  virtual void VisitThisExpr(ThisExpr *node) override;
   virtual void VisitParamsExpr(ParamsExpr *node) override;
   virtual void VisitImportExpr(ImportExpr *node) override;
   virtual void VisitArrayExpr(ArrayExpr *node) override;
-  virtual void VisitTableExpr(TableExpr *node) override;
+  virtual void VisitDictionaryExpr(DictionaryExpr *node) override;
   virtual void VisitForRangeStat(ForRangeStat *node) override;
+  virtual void VisitTableExpr(TableExpr *node) override;
 };
 
 }  // namespace internal
