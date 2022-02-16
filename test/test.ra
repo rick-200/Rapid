@@ -1,15 +1,10 @@
 var console = import("console");
-console.print(123);
-var x={
-a:"aaaa",
-b:4.5
-};
-x.b+=1;
-console.print(x.a);
-console.print(x.b);
-/*
-var console = import("console");
+var arr=[0,1,2,3,4,5,6,7,8,9];
+arr.push(10);
+console.print(arr);
 
+
+/*
 func for_each(arr,f){
     for(var i=0;i<arr.length;i+=1)
         f(arr[i]);
@@ -51,11 +46,12 @@ func place_right(f,b){
 
 var add10=place_right(add,10);
 
+func add100(x){return x+100;}
 
-console.print(map(arr,add10));
+console.print(map(arr,add100));
 console.print(sum(arr));
-*/
 
+*/
 /*
 push i
 i=begin

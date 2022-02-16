@@ -110,18 +110,6 @@ Object *SetProperty(Object *obj, String *name, Object *value) {
     return value_failure_normal;
   }
   switch (HeapObject::cast(obj)->type()) {
-    case HeapObjectType::String: {
-      return value_failure_normal;
-    }
-    case HeapObjectType::Array: {
-      return value_failure_normal;
-    }
-    case HeapObjectType::Dictionary: {
-      return value_failure_normal;
-    }
-    case HeapObjectType::Exception: {
-      return value_failure_normal;
-    }
     case HeapObjectType::Table: {
       size_t idx = Table::cast(obj)->table_info()->get_index(name);
       if (idx == TableInfo::invalid_index) return value_failure_normal;
@@ -132,6 +120,63 @@ Object *SetProperty(Object *obj, String *name, Object *value) {
       return NativeObject::cast(obj)->interface()->set_prop(
           NativeObject::cast(obj)->data(), name, value);
     }
+    default:
+      return value_failure_normal;
+  }
+}
+Object *GetIndex(Object *obj, Object *idx) {
+  if (!obj->IsHeapObject()) {
+    return value_failure_normal;
+  }
+  switch (HeapObject::cast(obj)->type()) {
+    case HeapObjectType::String:
+      return value_failure_normal;
+    case HeapObjectType::Array: {
+      if (idx->IsInteger())
+        return Array::cast(obj)->get(Integer::cast(idx)->value());
+      return value_failure_normal;
+    }
+    case HeapObjectType::Dictionary: {
+      if (idx->IsString()) return Dictionary::cast(obj)->get(String::cast(idx));
+      return value_failure_normal;
+    }
+    case HeapObjectType::Exception:
+      return value_failure_normal;
+    case HeapObjectType::Table:
+      return value_failure_normal;
+    case HeapObjectType::NativeObject:
+      return value_failure_normal;
+    default:
+      return value_failure_normal;
+  }
+}
+Object *SetIndex(Object *obj, Object *idx, Object *value) {
+  if (!obj->IsHeapObject()) {
+    return value_failure_normal;
+  }
+  switch (HeapObject::cast(obj)->type()) {
+    case HeapObjectType::String:
+      return value_failure_normal;
+    case HeapObjectType::Array: {
+      if (idx->IsInteger()) {
+        Array::cast(obj)->set(Integer::cast(idx)->value(), value);
+        return nullptr;
+      }
+      return value_failure_normal;
+    }
+    case HeapObjectType::Dictionary: {
+      if (idx->IsString()) {
+        return Dictionary::cast(obj)->set(String::cast(idx), value);
+        return nullptr;
+      }
+      return value_failure_normal;
+    }
+    case HeapObjectType::Exception:
+      return value_failure_normal;
+    case HeapObjectType::Table:
+      return value_failure_normal;
+    case HeapObjectType::NativeObject:
+      return value_failure_normal;
     default:
       return value_failure_normal;
   }
@@ -593,17 +638,17 @@ class ExecuterImpl : public Executer {
           break;
         case Opcode::SET_P:  // val obj name
           SetProperty(top[-1], String::cast(top[0]), top[-2]);
-          --top;
+          top -= 3;
           break;
         case Opcode::GET_I: {
-          VERIFY(0);  // TODO:GET_I
+          top[-1] = GetIndex(top[-1], top[0]);
           --top;
           break;
         }
 
-        case Opcode::SET_I: {
-          VERIFY(0);  // TODO:SET_I
-          top -= 2;
+        case Opcode::SET_I: {  // value obj index
+          SetIndex(top[-1], top[0], top[-2]);
+          top -= 3;
           break;
         }
 
@@ -635,8 +680,8 @@ class ExecuterImpl : public Executer {
           Object *func = *(top - cnt);
           if (func->IsFunctionData()) {
             FunctionData *fd = FunctionData::cast(func);
-            prepare_call(top - cnt + 1, cnt, fd);
             top -= cnt;  //此时top指向要调用的对象，同时此位置也接受返回值
+            prepare_call(top + 1, cnt, fd);
             goto l_begin;
           } else if (func->IsNativeObject()) {
             HandleScope hs;
@@ -645,6 +690,8 @@ class ExecuterImpl : public Executer {
                 NativeObject::cast(func)->data(), params);
             top -= cnt;  //此时top指向要调用的对象，同时此位置也接受返回值
             *top = ret;
+          } else {
+            ASSERT(0);
           }
           break;
         }

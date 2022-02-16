@@ -11,7 +11,7 @@ void Array::change_capacity(size_t new_cap) {
   m_array = h.ptr();
 }
 //// Array implement --------------------------------------
-//Object* Array::invoke_metafunction(Object* obj, MetaFunctionID id,
+// Object* Array::invoke_metafunction(Object* obj, MetaFunctionID id,
 //                                   const Parameters& params) {
 //  Array* _this = Array::cast(obj);
 //  const RawParameters& rp = params;
@@ -30,7 +30,7 @@ void Array::change_capacity(size_t new_cap) {
 //  }
 //  return Failure::NotImplemented;
 //}
-//Object* Array::invoke_memberfunc(Object* obj, String* name,
+// Object* Array::invoke_memberfunc(Object* obj, String* name,
 //                                 const Parameters& params) {
 //  const RawParameters rp = params;
 //  Array* _this = Array::cast(obj);
@@ -61,7 +61,7 @@ void Dictionary::try_rehash_shrink() {
   m_table = h.ptr();
 }
 
-//Object* Dictionary::invoke_metafunction(Object* obj, MetaFunctionID id,
+// Object* Dictionary::invoke_metafunction(Object* obj, MetaFunctionID id,
 //                                   const Parameters& params) {
 //  Dictionary* _this = Dictionary::cast(obj);
 //  const RawParameters& rp = params;
@@ -76,7 +76,7 @@ void Dictionary::try_rehash_shrink() {
 //  return Failure::NotImplemented;
 //}
 //
-//Object* Dictionary::invoke_memberfunc(Object* obj, String* name,
+// Object* Dictionary::invoke_memberfunc(Object* obj, String* name,
 //                                 const Parameters& params) {
 //  return Failure::NotImplemented;
 //
@@ -88,11 +88,12 @@ void Dictionary::try_rehash_shrink() {
 //  //return nullptr;
 //}
 //----------------------------------------------------------------
-//Object* Object::get_property(Object* obj, String* name, AccessSpecifier spec) {
+// Object* Object::get_property(Object* obj, String* name, AccessSpecifier spec)
+// {
 //  return Failure::NotImplemented;
 //}
 //
-//Object* Object::set_property(Object* obj, String* name, Object* val,
+// Object* Object::set_property(Object* obj, String* name, Object* val,
 //                             AccessSpecifier spec) {
 //  return Failure::NotImplemented;
 //}
@@ -106,16 +107,16 @@ void Dictionary::try_rehash_shrink() {
 //  return Failure::NotImplemented;
 //}
 
-//Object* Object::invoke_metafunction(Object* obj, MetaFunctionID id,
+// Object* Object::invoke_metafunction(Object* obj, MetaFunctionID id,
 //                                    const Parameters& params) {
 //  return Failure::NotImplemented;
 //}
-//Object* Object::invoke_memberfunc(Object* obj, String* name,
+// Object* Object::invoke_memberfunc(Object* obj, String* name,
 //                                  const Parameters& params) {
 //  return Failure::NotImplemented;
 //}
 //
-//void Object::trace_ref(Object* obj, GCTracer* gct) {}
+// void Object::trace_ref(Object* obj, GCTracer* gct) {}
 //
 void debug_print(FILE* f, Object* obj) {
   if (obj->IsInteger()) {
@@ -146,18 +147,21 @@ void debug_print(FILE* f, Object* obj) {
     fprintf(f, "<sharedfuncdata>%s@%p",
             SharedFunctionData::cast(obj)->name->cstr(),
             SharedFunctionData::cast(obj));
+  } else if (obj->IsNativeObject()) {
+    fprintf(f, "<native_object>");
   } else {
     fprintf(f, "<unknown>");
   }
 }
 //------------------------------------------RapidObject----------------------------------------------
 
-//Object* RapidObject::get_property(Object* obj, String* name,
+// Object* RapidObject::get_property(Object* obj, String* name,
 //                                  AccessSpecifier spec) {
 //  RapidObject* _this = RapidObject::cast(obj);
 //  Object* ret;
 //  while (_this != nullptr) {
-//    ASSERT(spec == AccessSpecifier::Public || spec == AccessSpecifier::Protected ||
+//    ASSERT(spec == AccessSpecifier::Public || spec ==
+//    AccessSpecifier::Protected ||
 //           spec == AccessSpecifier::Private);
 //    ret = _this->m_public.property->get(name);//×ÜÄÜ·ÃÎÊpublicÓò
 //    if (ret != nullptr) return ret;
@@ -173,11 +177,11 @@ void debug_print(FILE* f, Object* obj) {
 //    spec = AccessSpecifier::Protected;
 //    _this = _this->parent;
 //  }
-//  
+//
 //  return nullptr;
 //}
 //
-//Object* RapidObject::set_property(Object* obj, String* name, Object* val,
+// Object* RapidObject::set_property(Object* obj, String* name, Object* val,
 //                                  AccessSpecifier spec) {
 //  return nullptr;
 //}
